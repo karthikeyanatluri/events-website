@@ -1,0 +1,2664 @@
+import { getDepartmentEvents } from "../../data/eventsData";
+import {
+    useEffect,
+    useRef,
+    useState,
+    type CSSProperties,
+    type MouseEvent as ReactMouseEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
+
+import styles from "./EventsPage.module.scss";
+
+import tentViolet from "../../assets/Events/tents/tent-violet.webp";
+import tentMaroon from "../../assets/Events/tents/tent-maroon.webp";
+import tentIndigo from "../../assets/Events/tents/tent-indigo.webp";
+import tentPlum from "../../assets/Events/tents/tent-plum.webp";
+import tentAmethyst from "../../assets/Events/tents/tent-amethyst.webp";
+import tentWine from "../../assets/Events/tents/tent-wine.webp";
+import tentRoyal from "../../assets/Events/tents/tent-royal.webp";
+
+
+interface EventData {
+    id: string;
+    name: string;
+    category: string;
+    club_name: string | null;
+    venue: string | null;
+    description: string | null;
+    image_url: string | null;
+    rulebook: string | null;
+}
+
+/* =========================================================
+   DEPARTMENTS
+
+   The one list that drives the tents, in display order. The
+   first UPPER_ROW_COUNT sit on the upper row and the rest on
+   the lower row. Edit names here; each tent's key and
+   data-department use the lowercase slug (e.g. "ai").
+========================================================= */
+
+const departments = [
+    "AI",
+    "CIVIL",
+    "CSE",
+    "ECE",
+    "EEE",
+    "EIE",
+    "MECHANICAL",
+] as const;
+
+type Department = (typeof departments)[number];
+
+function slugOf(department: Department) {
+    return department.toLowerCase();
+}
+
+/* =========================================================
+   TENT SHADES
+
+   Palette variants of tent-clean.png (stripes recoloured to
+   the page's jewel tones). Tent i uses shade i, cycling if
+   more departments are added. `smoke` is the colour of the
+   smoke that rises once the wand has spun over that tent.
+========================================================= */
+
+const TENT_SHADES = [
+    { src: tentViolet, smoke: "#4d2b63" },
+    { src: tentMaroon, smoke: "#50041d" },
+    { src: tentIndigo, smoke: "#03176b" },
+    { src: tentPlum, smoke: "#3b0c3c" },
+    { src: tentAmethyst, smoke: "#342875" },
+    { src: tentWine, smoke: "#5a0a2e" },
+    { src: tentRoyal, smoke: "#1a2a6b" },
+];
+
+function shadeOf(department: Department) {
+    return TENT_SHADES[
+        departments.indexOf(department) %
+            TENT_SHADES.length
+    ];
+}
+
+
+
+/* =========================================================
+   EVENT DATA
+
+   Events per department, shown in the modal when its tent is
+   clicked. A department with no entry opens the "No Events
+   Found" card.
+========================================================= */
+
+const eventsData: Record<Department, EventData[]> = {
+    AI: getDepartmentEvents("AI") as unknown as EventData[],
+    CIVIL: getDepartmentEvents("CIVIL") as unknown as EventData[],
+    CSE: getDepartmentEvents("CSE") as unknown as EventData[],
+    ECE: getDepartmentEvents("ECE") as unknown as EventData[],
+    EEE: getDepartmentEvents("EEE") as unknown as EventData[],
+    EIE: getDepartmentEvents("EIE") as unknown as EventData[],
+    MECHANICAL: getDepartmentEvents("MECHANICAL") as unknown as EventData[],
+};
+
+/* =========================================================
+   TENT LEDS
+
+   Hovering (or focusing / tapping) a tent drops a fresh,
+   random handful of LED bulbs onto it, which then twinkle at
+   their own random speeds. LED_SPOTS are points inside the
+   tent's silhouette (as % of the image), sampled from
+   tent-clean.png away from its edges, ropes and the label
+   on the banner, so a bulb never floats in mid-air or covers
+   the department name.
+========================================================= */
+
+const LED_SPOTS: [number, number][] = [
+    [51, 22], [53, 22], [45, 26], [49, 27], [54, 28], [46, 31], [50, 32], [52, 33],
+    [58, 33], [53, 36], [61, 36], [39, 37], [42, 38], [46, 38], [49, 38], [58, 38],
+    [35, 41], [53, 42], [38, 43], [41, 43], [47, 44], [50, 44], [56, 44], [61, 44],
+    [65, 44], [34, 47], [39, 47], [50, 47], [62, 47], [64, 47], [31, 48], [41, 48],
+    [47, 48], [58, 48], [53, 49], [68, 49], [46, 52], [58, 52], [42, 53], [49, 53],
+    [61, 53], [65, 53], [27, 54], [29, 54], [34, 54], [39, 54], [55, 54], [68, 54],
+    [73, 55], [42, 57], [33, 58], [66, 58], [81, 58], [30, 59], [38, 59], [49, 59],
+    [53, 59], [58, 59], [76, 59], [20, 60], [23, 60], [26, 60], [45, 60], [60, 60],
+    [68, 60], [72, 60], [83, 60], [7, 63], [92, 63], [12, 66], [12, 68], [9, 69],
+    [8, 73], [12, 74], [89, 76], [11, 79], [27, 82], [77, 82], [12, 84], [27, 84],
+    [34, 84], [37, 84], [46, 84], [16, 85], [50, 85], [68, 85], [88, 85], [18, 86],
+    [22, 86], [31, 86], [54, 86], [58, 86], [60, 86], [73, 86], [80, 86], [84, 86],
+    [41, 87], [65, 87], [75, 87], [43, 89], [14, 90], [24, 90], [75, 90], [80, 90],
+    [84, 90], [12, 91], [35, 91], [46, 91], [53, 91], [57, 91], [62, 91], [65, 91],
+    [68, 91], [72, 91], [87, 91], [18, 92], [26, 92], [30, 92], [39, 92], [51, 92],
+    [33, 95], [49, 95], [83, 95], [41, 96],
+];
+
+const LED_COLORS = [
+    "#fff4d6", // warm white
+    "#ffd37a", // gold
+    "#ffb347", // amber
+    "#ff9fd0", // rose
+    "#cdb4ff", // lilac
+];
+
+const LIGHTS_PER_TENT = 22;
+
+interface TentLight {
+    id: string;
+    x: number;
+    y: number;
+    color: string;
+    size: number; // cqi, so bulbs scale with the tent
+    fall: number; // s before it drops in
+    twinkle: number; // s per twinkle
+}
+
+let lightBatch = 0;
+
+function scatterLights(): TentLight[] {
+    lightBatch += 1;
+
+    const pool = [...LED_SPOTS];
+    const lights: TentLight[] = [];
+
+    while (
+        lights.length < LIGHTS_PER_TENT &&
+        pool.length > 0
+    ) {
+        const [[x, y]] = pool.splice(
+            Math.floor(Math.random() * pool.length),
+            1
+        );
+
+        lights.push({
+            id: `${lightBatch}-${lights.length}`,
+            x,
+            y,
+            color: LED_COLORS[
+                Math.floor(
+                    Math.random() * LED_COLORS.length
+                )
+            ],
+            size: 2.2 + Math.random() * 1.6,
+            fall: Math.random() * 0.45,
+            twinkle: 0.6 + Math.random() * 1.6,
+        });
+    }
+
+    return lights;
+}
+
+/* =========================================================
+   MAGIC WAND -> SMOKE -> INTO THE TENT
+
+   Clicking a tent summons a wand over it. The wand spins
+   around its handle for SPELL_SPIN_MS while its star tip
+   sheds sparkles, then flicks out a burst of sparkles and
+   fades. The original smoke (SmokeCanvas) then rises from
+   the spot the wand spun over for SMOKE_RISE_MS. As the
+   smoke clears, the camera dives into the tent's doorway
+   (DIVE_MS): the whole scene zooms toward the door until it
+   fills the screen, and the inside of the tent fades in.
+   The modal opens inside the tent.
+
+   With prefers-reduced-motion the wand and the dive are
+   skipped: smoke, then the inside fades in.
+========================================================= */
+
+const SPELL_SPIN_MS = 1300;
+
+// how long the smoke rises before it starts to clear
+const SMOKE_RISE_MS = 1800;
+
+// How long the smoke's fade-out transition takes. Must match
+// the `transition: opacity ...` duration set on .smokeCanvas
+// (and its fade-out variant) in EventsPage.module.scss.
+const SMOKE_FADE_OUT_MS = 1000;
+
+// the dive starts once the smoke has thinned a little
+const DIVE_DELAY_MS = 400;
+
+// how long the camera takes to dive into the doorway
+// (passed to the CSS as --dive-ms)
+const DIVE_MS = 1300;
+
+const DIVE_MAX_SCALE = 36;
+
+// the modal opens this long after the dive ends
+const INSIDE_SETTLE_MS = 200;
+
+// must match the opacity transition on .tentInteriorLeaving
+const INSIDE_FADE_OUT_MS = 600;
+
+// the doorway in the tent images, as fractions of the image:
+// its centre and its width
+const TENT_DOOR = { x: 0.5, y: 0.85, width: 0.14 };
+
+/* =========================================================
+   INSIDE THE TENT
+
+   Artwork for the inside of each tent, shown when the camera
+   has dived in. Until it is added, a placeholder canopy in
+   the tent's colour is drawn in CSS (.tentInterior). To add
+   it, import the image above and map it here, e.g.
+   { AI: aiInside, CIVIL: civilInside }; a department without
+   an entry keeps the placeholder.
+========================================================= */
+
+const TENT_INTERIORS: Partial<Record<Department, string>> = {};
+
+const DEFAULT_SMOKE_COLOR = "#5b5189";
+
+function prefersReducedMotion() {
+    return window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches;
+}
+
+const easeInOut = (t: number) =>
+    t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+const easeOut = (t: number) =>
+    1 - Math.pow(1 - t, 3);
+
+interface RgbColor {
+    r: number;
+    g: number;
+    b: number;
+}
+
+function hexToRgb(hex: string): RgbColor {
+    const sanitized = hex.replace("#", "");
+
+    const bigint = parseInt(sanitized, 16);
+
+    return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255,
+    };
+}
+
+function clampChannel(value: number) {
+    return Math.max(0, Math.min(255, value));
+}
+
+function adjustColor(
+    color: RgbColor,
+    amount: number
+): RgbColor {
+    return {
+        r: clampChannel(color.r + amount),
+        g: clampChannel(color.g + amount),
+        b: clampChannel(color.b + amount),
+    };
+}
+
+function rgbString(color: RgbColor) {
+    return `${color.r}, ${color.g}, ${color.b}`;
+}
+
+// a soft round glow, pre-rendered once per colour so the draw
+// loop only calls drawImage (no shadowBlur per particle)
+function makeGlowSprite(rgb: string) {
+    const size = 64;
+    const sprite = document.createElement("canvas");
+
+    sprite.width = size;
+    sprite.height = size;
+
+    const g = sprite.getContext("2d");
+
+    if (g) {
+        const gradient = g.createRadialGradient(
+            size / 2,
+            size / 2,
+            0,
+            size / 2,
+            size / 2,
+            size / 2
+        );
+
+        gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+        gradient.addColorStop(0.18, `rgba(${rgb}, 0.95)`);
+        gradient.addColorStop(0.45, `rgba(${rgb}, 0.35)`);
+        gradient.addColorStop(1, `rgba(${rgb}, 0)`);
+
+        g.fillStyle = gradient;
+        g.fillRect(0, 0, size, size);
+    }
+
+    return sprite;
+}
+
+interface Sparkle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    born: number;
+    life: number;
+    size: number;
+    sprite: number;
+}
+
+interface WandSpellProps {
+    originX: number;
+    originY: number;
+    radius: number;
+    color: string;
+    fadingOut: boolean;
+}
+
+function WandSpell({
+    originX,
+    originY,
+    radius,
+    color,
+    fadingOut,
+}: WandSpellProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) return;
+
+        const base = hexToRgb(color);
+        const tint = rgbString(adjustColor(base, 150));
+
+        const sprites = [
+            makeGlowSprite("255, 214, 120"), // gold
+            makeGlowSprite("255, 246, 225"), // white
+            makeGlowSprite(tint), // tent tint
+        ];
+
+        let width = 0;
+        let height = 0;
+
+        const resize = () => {
+            const dpr = Math.min(
+                window.devicePixelRatio || 1,
+                1.5
+            );
+
+            width = window.innerWidth;
+            height = window.innerHeight;
+
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+
+        resize();
+
+        window.addEventListener("resize", resize);
+
+        const sparkles: Sparkle[] = [];
+
+        const spawnSparkle = (
+            x: number,
+            y: number,
+            now: number,
+            speed: number,
+            angle = Math.random() * Math.PI * 2
+        ) => {
+            sparkles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                born: now,
+                life: 600 + Math.random() * 600,
+                size: 6 + Math.random() * 10,
+                sprite: Math.floor(Math.random() * 3),
+            });
+        };
+
+        const wandLength = radius * 1.25;
+        const turns = 2;
+        const startAngle = -Math.PI * 0.75;
+
+        let burstDone = false;
+        let lastTip: { x: number; y: number } | null = null;
+        let frame = 0;
+
+        const start = performance.now();
+
+        const drawStar = (
+            r: number,
+            spin: number
+        ) => {
+            ctx.save();
+            ctx.rotate(spin);
+            ctx.beginPath();
+
+            for (let i = 0; i < 10; i++) {
+                const a = (i * Math.PI) / 5 - Math.PI / 2;
+                const rr = i % 2 === 0 ? r : r * 0.45;
+
+                ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+            }
+
+            ctx.closePath();
+
+            const fill = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+
+            fill.addColorStop(0, "#fffbe8");
+            fill.addColorStop(0.5, "#ffd56b");
+            fill.addColorStop(1, "#c98a1c");
+
+            ctx.fillStyle = fill;
+            ctx.fill();
+            ctx.restore();
+        };
+
+        const drawWand = (
+            angle: number,
+            alpha: number,
+            scale: number,
+            now: number
+        ) => {
+            const L = wandLength * scale;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(originX, originY);
+            ctx.rotate(angle);
+
+            // halo behind the star
+            ctx.globalCompositeOperation = "lighter";
+            ctx.drawImage(
+                sprites[0],
+                L - L * 0.35,
+                -L * 0.35,
+                L * 0.7,
+                L * 0.7
+            );
+            ctx.globalCompositeOperation = "source-over";
+
+            // rod: plum lacquer with a gold edge and a soft glow,
+            // tapering to the tip, so it reads on the dark scene
+            const rod = ctx.createLinearGradient(0, -L * 0.04, 0, L * 0.04);
+
+            rod.addColorStop(0, "#c49ad4");
+            rod.addColorStop(0.45, "#6e3f80");
+            rod.addColorStop(1, "#2a1433");
+
+            ctx.fillStyle = rod;
+            ctx.strokeStyle = "rgba(224, 174, 50, 0.9)";
+            ctx.lineWidth = Math.max(1, L * 0.008);
+            ctx.shadowColor = "rgba(255, 214, 120, 0.7)";
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.moveTo(-L * 0.2, -L * 0.035);
+            ctx.lineTo(L * 0.9, -L * 0.014);
+            ctx.lineTo(L * 0.9, L * 0.014);
+            ctx.lineTo(-L * 0.2, L * 0.035);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // gold bands on the handle
+            ctx.fillStyle = "#e0ae32";
+
+            for (const at of [-0.16, -0.04, 0.06]) {
+                ctx.fillRect(
+                    L * at,
+                    -L * 0.04,
+                    L * 0.025,
+                    L * 0.08
+                );
+            }
+
+            ctx.translate(L * 0.95, 0);
+            drawStar(L * 0.12, now / 300);
+            ctx.restore();
+        };
+
+        const draw = (now: number) => {
+            const t = now - start;
+
+            ctx.clearRect(0, 0, width, height);
+
+            /* ---------- wand ---------- */
+
+            if (t < SPELL_SPIN_MS + 300) {
+                const spinT = Math.min(1, t / SPELL_SPIN_MS);
+
+                const angle =
+                    startAngle +
+                    turns * Math.PI * 2 * easeInOut(spinT);
+
+                const alpha =
+                    t < 150
+                        ? t / 150
+                        : t > SPELL_SPIN_MS
+                          ? Math.max(0, 1 - (t - SPELL_SPIN_MS) / 300)
+                          : 1;
+
+                const scale = 0.6 + 0.4 * easeOut(Math.min(1, t / 250));
+
+                const tipX =
+                    originX + Math.cos(angle) * wandLength * 0.95 * scale;
+                const tipY =
+                    originY + Math.sin(angle) * wandLength * 0.95 * scale;
+
+                // sparkle trail, filled in along the tip's path so
+                // it stays continuous even on slow frames
+                if (t < SPELL_SPIN_MS) {
+                    const from = lastTip ?? { x: tipX, y: tipY };
+                    const steps = Math.max(
+                        1,
+                        Math.ceil(
+                            Math.hypot(tipX - from.x, tipY - from.y) / 6
+                        )
+                    );
+
+                    for (let i = 1; i <= steps; i++) {
+                        const k = i / steps;
+
+                        spawnSparkle(
+                            from.x + (tipX - from.x) * k,
+                            from.y + (tipY - from.y) * k,
+                            now,
+                            0.02 + Math.random() * 0.05
+                        );
+                    }
+                }
+
+                lastTip = { x: tipX, y: tipY };
+
+                drawWand(angle, alpha, scale, now);
+            }
+
+            /* ---------- burst ---------- */
+
+            if (!burstDone && t >= SPELL_SPIN_MS) {
+                burstDone = true;
+
+                const n = width < 700 ? 60 : 110;
+
+                for (let i = 0; i < n; i++) {
+                    spawnSparkle(
+                        lastTip?.x ?? originX,
+                        lastTip?.y ?? originY,
+                        now,
+                        0.15 + Math.random() * 0.45
+                    );
+                }
+            }
+
+            /* ---------- sparkles ---------- */
+
+            ctx.globalCompositeOperation = "lighter";
+
+            for (let i = sparkles.length - 1; i >= 0; i--) {
+                const s = sparkles[i];
+                const age = now - s.born;
+
+                if (age > s.life) {
+                    sparkles.splice(i, 1);
+                    continue;
+                }
+
+                const k = age / s.life;
+                const size = s.size * (1 - k * 0.6);
+
+                ctx.globalAlpha = 1 - k;
+
+                ctx.drawImage(
+                    sprites[s.sprite],
+                    s.x + s.vx * age - size / 2,
+                    s.y + s.vy * age + 0.00004 * age * age - size / 2,
+                    size,
+                    size
+                );
+            }
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "source-over";
+
+            // the wand is gone and the last sparkle has faded:
+            // stop drawing, the smoke takes over from here
+            if (t > SPELL_SPIN_MS + 300 && sparkles.length === 0) {
+                return;
+            }
+
+            frame = requestAnimationFrame(draw);
+        };
+
+        frame = requestAnimationFrame(draw);
+
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("resize", resize);
+        };
+    }, [originX, originY, radius, color]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className={`${styles.spellCanvas} ${
+                fadingOut ? styles.spellCanvasFadeOut : ""
+            }`}
+            aria-hidden="true"
+        />
+    );
+}
+
+/* =========================================================
+   SMOKE TRANSITION
+========================================================= */
+
+interface SmokeCanvasProps {
+    originX: number;
+    originY: number;
+    color: string;
+    fadingOut: boolean;
+}
+
+function SmokeCanvas({
+    originX,
+    originY,
+    color,
+    fadingOut,
+}: SmokeCanvasProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) return;
+
+        /* =====================================================
+           COLOR SETUP
+           Base smoke color comes from the active category. Speck
+           highlights/shadows are derived from it so the grain
+           texture always matches the category tint instead of a
+           fixed purple.
+        ===================================================== */
+
+        const baseColor = hexToRgb(color);
+
+        const baseColorStr = rgbString(baseColor);
+
+        const lightSpeckColor = rgbString(
+            adjustColor(baseColor, 70)
+        );
+
+        const darkSpeckColor = rgbString(
+            adjustColor(baseColor, -45)
+        );
+
+        let animationFrame = 0;
+
+        const startTime = performance.now();
+
+        let lastDrawTime = 0;
+
+        const frameInterval = 1000 / 40; // cap the heavy work at ~40fps
+
+        /* =====================================================
+           CANVAS RESIZE
+        ===================================================== */
+
+        const resize = () => {
+            const dpr = Math.min(
+                window.devicePixelRatio || 1,
+                1.5
+            );
+
+            canvas.width =
+                window.innerWidth * dpr;
+
+            canvas.height =
+                window.innerHeight * dpr;
+
+            canvas.style.width =
+                `${window.innerWidth}px`;
+
+            canvas.style.height =
+                `${window.innerHeight}px`;
+
+            ctx.setTransform(
+                dpr,
+                0,
+                0,
+                dpr,
+                0,
+                0
+            );
+        };
+
+        resize();
+
+        window.addEventListener(
+            "resize",
+            resize
+        );
+
+        /* =====================================================
+           BASIC SETTINGS
+        ===================================================== */
+
+        const isMobile =
+            window.innerWidth <= 700;
+
+        const centerX =
+            window.innerWidth * 0.5;
+
+        const centerY =
+            window.innerHeight * 0.5 - 20;
+
+        // Cloud footprint scaled up ~1.4x in both directions on
+        // mobile and desktop, compared to the original size.
+        const cloudWidth =
+            isMobile ? 980 : 1400;
+
+        const cloudHeight =
+            isMobile ? 1190 : 700;
+
+        /* =====================================================
+           PRE-RENDERED TEXTURES
+           Built once, off the main draw loop. Each has its own
+           softness baked in via a one-time canvas blur, so the
+           draw loop never needs ctx.filter or a fresh gradient.
+        ===================================================== */
+const makeSoftSprite = (
+    blurPx: number
+) => {
+    const spriteSize = 256;
+
+    const sprite =
+        document.createElement(
+            "canvas"
+        );
+
+    sprite.width = spriteSize;
+    sprite.height = spriteSize;
+
+    const sctx =
+        sprite.getContext("2d");
+
+    if (!sctx) return sprite;
+
+    const r = spriteSize / 2;
+
+    sctx.filter =
+        `blur(${blurPx}px)`;
+
+    const gradient =
+        sctx.createRadialGradient(
+            r,
+            r,
+            0,
+            r,
+            r,
+            r * 0.78
+        );
+
+    gradient.addColorStop(
+        0,
+        `rgba(${baseColorStr}, 1)`
+    );
+
+    gradient.addColorStop(
+        0.5,
+        `rgba(${baseColorStr}, 0.62)`
+    );
+
+    gradient.addColorStop(
+        0.8,
+        `rgba(${baseColorStr}, 0.22)`
+    );
+
+    gradient.addColorStop(
+        1,
+        `rgba(${baseColorStr}, 0)`
+    );
+
+    sctx.fillStyle = gradient;
+
+    sctx.beginPath();
+
+    sctx.arc(
+        r,
+        r,
+        r * 0.78,
+        0,
+        Math.PI * 2
+    );
+
+    sctx.fill();
+
+    /* =====================================================
+       TEXTURE PASS
+       Scatter uneven light/dark specks over the base gradient
+       with a lighter blur than the base, so the sprite reads
+       as grainy smoke instead of a flat soft disc. Speck colors
+       are derived from the category's base color.
+    ===================================================== */
+
+    sctx.filter =
+        `blur(${blurPx * 0.4}px)`;
+
+    const textureSpecks = 40;
+
+    for (
+        let i = 0;
+        i < textureSpecks;
+        i++
+    ) {
+        const angle =
+            Math.random() *
+            Math.PI *
+            2;
+
+        const dist =
+            Math.random() *
+            r *
+            0.75;
+
+        const speckX =
+            r +
+            Math.cos(angle) *
+                dist;
+
+        const speckY =
+            r +
+            Math.sin(angle) *
+                dist;
+
+        const speckRadius =
+            6 +
+            Math.random() * 22;
+
+        const isLight =
+            Math.random() > 0.45;
+
+        sctx.globalAlpha =
+            0.08 +
+            Math.random() * 0.16;
+
+        sctx.fillStyle = isLight
+            ? `rgba(${lightSpeckColor}, 1)`
+            : `rgba(${darkSpeckColor}, 1)`;
+
+        sctx.beginPath();
+
+        sctx.arc(
+            speckX,
+            speckY,
+            speckRadius,
+            0,
+            Math.PI * 2
+        );
+
+        sctx.fill();
+    }
+
+    sctx.globalAlpha = 1;
+
+    /* =====================================================
+       CLIP TEXTURE TO SOFT CIRCLE
+       Cuts the specks back down to the original falloff shape
+       so grain doesn't spill a hard edge outside the cloud.
+    ===================================================== */
+
+    sctx.globalCompositeOperation =
+        "destination-in";
+
+    sctx.filter =
+        `blur(${blurPx}px)`;
+
+    const clipGradient =
+        sctx.createRadialGradient(
+            r,
+            r,
+            0,
+            r,
+            r,
+            r * 0.78
+        );
+
+    clipGradient.addColorStop(
+        0,
+        "rgba(255, 255, 255, 1)"
+    );
+
+    clipGradient.addColorStop(
+        0.8,
+        "rgba(255, 255, 255, 1)"
+    );
+
+    clipGradient.addColorStop(
+        1,
+        "rgba(255, 255, 255, 0)"
+    );
+
+    sctx.fillStyle = clipGradient;
+
+    sctx.beginPath();
+
+    sctx.arc(
+        r,
+        r,
+        r * 0.78,
+        0,
+        Math.PI * 2
+    );
+
+    sctx.fill();
+
+    sctx.globalCompositeOperation =
+        "source-over";
+
+    return sprite;
+};
+
+        // sharper texture for individual wisps, softer one for the big cloud body/puffs
+        const particleSprite =
+            makeSoftSprite(
+                isMobile ? 3 : 4
+            );
+
+        const puffSprite =
+            makeSoftSprite(
+                isMobile ? 10 : 16
+            );
+
+        /* =====================================================
+           PARTICLE WISPS
+           Big particles are biased close to the center and stay
+           put once they arrive. Small particles are biased out
+           toward the rim and keep idly floating once settled.
+           Counts are scaled up (~2x) alongside the larger cloud
+           footprint so the wisp density per unit area stays the
+           same as before.
+        ===================================================== */
+
+        const coreCount =
+            isMobile ? 150 : 200;
+
+        const edgeCount =
+            isMobile ? 170 : 440;
+
+        const makeParticle = (
+    isCore: boolean
+) => {
+    const side =
+        Math.random() > 0.5
+            ? 1
+            : -1;
+
+    /*
+     * MOBILE:
+     * Keep the smoke concentrated around the center
+     * instead of allowing particles to randomly spread
+     * far above it.
+     */
+    const reach = isCore
+    ? 0.08 + Math.random() * 0.28
+    : isMobile
+        ? 0.25 + Math.random() * 0.3
+        : 0.355 + Math.random() * 0.45;
+
+    /*
+     * Full circular distribution so particles spread
+     * evenly in every direction (left/right/up/down)
+     * around the center, instead of being biased
+     * toward one side.
+     */
+    const angle =
+        Math.random() *
+        Math.PI *
+        2;
+
+    const rawTargetX =
+        Math.cos(angle) *
+        cloudWidth *
+        0.6 *
+        reach;
+
+    const rawTargetY =
+        Math.sin(angle) *
+        cloudHeight *
+        0.5 *
+        reach;
+
+    const ellipseA =
+        cloudWidth * 0.5;
+
+    const ellipseB =
+        cloudHeight * 0.5;
+
+    const ellipseDist =
+        Math.sqrt(
+            (rawTargetX /
+                ellipseA) ** 2 +
+                (rawTargetY /
+                    ellipseB) ** 2
+        );
+
+    const clampScale =
+        ellipseDist > 1
+            ? 1 / ellipseDist
+            : 1;
+
+    return {
+        startX:
+            originX +
+            (Math.random() - 0.5) *
+                35,
+
+        startY:
+            originY +
+            Math.random() *
+                18,
+
+        targetX:
+            centerX +
+            rawTargetX *
+                clampScale,
+
+        targetY:
+            centerY +
+            rawTargetY *
+                clampScale,
+
+        size: isCore
+            ? 48 +
+              Math.random() * 45
+            : 20 +
+              Math.random() * 25,
+
+        drift:
+            side *
+            (isCore
+                ? 6 +
+                  Math.random() * 10
+                : 18 +
+                  Math.random() * 35),
+
+        phase:
+            Math.random() *
+            Math.PI *
+            2,
+
+        speed:
+            0.1 +
+            Math.random() *
+                0.45,
+
+        delay:
+            Math.random() * 0.8,
+
+        opacity:
+            0.55 +
+            Math.random() * 0.45,
+
+        isCore,
+
+        idleDrift: isCore
+            ? 0
+            : 5 +
+              Math.random() * 10,
+
+        idlePhase:
+            Math.random() *
+            Math.PI *
+            2,
+
+        idleSpeed:
+            0.2 +
+            Math.random() * 0.25,
+    };
+};
+        
+
+        const particles = [
+            ...Array.from(
+                { length: coreCount },
+                () => makeParticle(true)
+            ),
+            ...Array.from(
+                { length: edgeCount },
+                () => makeParticle(false)
+            ),
+        ];
+
+        /* =====================================================
+           CENTRAL CLOUD PUFFS
+           Mirrored above/below and left/right of center so the
+           cloud reads as evenly filled on every side, rather
+           than concentrated toward one corner. 12 puffs spread
+           over the larger footprint keeps density on par with
+           the original 5-puff version.
+        ===================================================== */
+
+        const cloudPuffs = [
+            { x: -0.42, y: 0.30, s: 0.72 },
+            { x: 0.42, y: 0.30, s: 0.72 },
+            { x: -0.42, y: -0.30, s: 0.68 },
+            { x: 0.42, y: -0.30, s: 0.68 },
+            { x: -0.24, y: 0.38, s: 0.88 },
+            { x: 0.24, y: 0.38, s: 0.88 },
+            { x: -0.24, y: -0.38, s: 0.80 },
+            { x: 0.24, y: -0.38, s: 0.80 },
+            { x: -0.06, y: 0.36, s: 1.00 },
+            { x: 0.06, y: -0.36, s: 0.92 },
+            { x: 0, y: 0.12, s: 0.75 },
+            { x: 0, y: -0.12, s: 0.75 },
+        ];
+
+        /* =====================================================
+           SOFT EASING
+        ===================================================== */
+
+        const easeOut = (t: number) =>
+            1 - Math.pow(1 - t, 2.25);
+
+        /* =====================================================
+           DRAW
+        ===================================================== */
+
+        const draw = (now: number) => {
+            if (
+                now - lastDrawTime <
+                frameInterval
+            ) {
+                animationFrame =
+                    requestAnimationFrame(
+                        draw
+                    );
+
+                return;
+            }
+
+            lastDrawTime = now;
+
+            const elapsed =
+                (now - startTime) / 1000;
+
+            ctx.clearRect(
+                0,
+                0,
+                window.innerWidth,
+                window.innerHeight
+            );
+
+            /* =================================================
+               RISING PARTICLES
+            ================================================= */
+
+            particles.forEach((particle) => {
+                const rawProgress =
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            (elapsed -
+                                particle.delay) /
+                                2.35
+                        )
+                    );
+
+                const progress =
+                    easeOut(rawProgress);
+
+                const riseAmount =
+                    Math.min(
+                        window.innerHeight *
+                            0.4,
+                        390
+                    );
+
+                const rise =
+                    Math.sin(
+                        progress *
+                            Math.PI *
+                            0.9
+                    ) * riseAmount;
+
+                const spread =
+                    Math.pow(
+                        progress,
+                        1.3
+                    );
+
+                const wave =
+                    Math.sin(
+                        elapsed *
+                            particle.speed *
+                            2.2 +
+                            particle.phase
+                    );
+
+                const insideCloudStart = 0.75;
+
+                const insideCloudFactor =
+                    Math.min(
+                        1,
+                        Math.max(
+                            0,
+                            (spread -
+                                insideCloudStart) /
+                                (1 -
+                                    insideCloudStart)
+                        )
+                    );
+
+                // once a particle has fully arrived, small ones keep
+                // idly floating in place; core ones stay still
+                const settled =
+                    rawProgress >= 1;
+
+                const idleX = settled
+                    ? Math.cos(
+                          elapsed *
+                              particle.idleSpeed +
+                              particle.idlePhase
+                      ) * particle.idleDrift
+                    : 0;
+
+                const idleY = settled
+                    ? Math.sin(
+                          elapsed *
+                              particle.idleSpeed *
+                              0.8 +
+                              particle.idlePhase
+                      ) *
+                      particle.idleDrift *
+                      0.6
+                    : 0;
+
+                const x =
+                    particle.startX +
+                    (particle.targetX -
+                        particle.startX) *
+                        spread +
+                    wave *
+                        particle.drift * 0.25 *
+                        insideCloudFactor +
+                    idleX;
+
+                const risingY =
+                    particle.startY -
+                    rise;
+
+                const y =
+                    risingY +
+                    (particle.targetY -
+                        risingY) *
+                        Math.pow(
+                            progress,
+                            1.8
+                        ) +
+                    idleY;
+
+                const size =
+                    particle.size *
+                    (2 +
+                        progress * 1.5);
+
+                const alpha =
+                    particle.opacity *
+                    (0.10 +
+                        progress * 0.46);
+
+                const aspect =
+                    0.62 +
+                    Math.sin(
+                        particle.phase
+                    ) * 0.18;
+
+                ctx.save();
+
+                ctx.globalAlpha = alpha;
+
+                ctx.translate(x, y);
+
+                ctx.rotate(particle.phase);
+
+                ctx.scale(1, aspect);
+
+                ctx.drawImage(
+                    particleSprite,
+                    -size,
+                    -size,
+                    size * 2,
+                    size * 2
+                );
+
+                ctx.restore();
+            });
+
+            /* =================================================
+               CENTRAL SOFT CLOUD
+               (pre-rendered sprite — no per-frame gradients,
+               no runtime blur)
+            ================================================= */
+
+            if (elapsed > 0.42) {
+                const cloudProgress =
+                    Math.min(
+                        1,
+                        Math.max(
+                            0,
+                            (elapsed - 0.42) /
+                                0.95
+                        )
+                    );
+
+                const eased =
+                    easeOut(cloudProgress);
+
+                const baseRadius =
+                    isMobile
+                        ? 280
+                        : 560;
+
+                ctx.save();
+
+                ctx.globalAlpha =
+                    0.24 * eased;
+
+                ctx.translate(
+                    centerX,
+                    centerY
+                );
+
+                ctx.scale(
+                    1,
+                    isMobile ? 0.7 : 0.8 / 1.1
+                );
+
+                ctx.drawImage(
+                    puffSprite,
+                    -baseRadius * 1.1,
+                    -baseRadius * 1.1,
+                    baseRadius * 1.1 * 2,
+                    baseRadius * 1.1 * 2
+                );
+
+                ctx.restore();
+
+                cloudPuffs.forEach(
+                    (puff, index) => {
+                        const puffDelay =
+                            index * 0.015;
+
+                        const puffProgress =
+                            Math.min(
+                                1,
+                                Math.max(
+                                    0,
+                                    (cloudProgress -
+                                        puffDelay) /
+                                        0.75
+                                )
+                            );
+
+                        const puffEase =
+                            easeOut(
+                                puffProgress
+                            );
+
+                        const x =
+                            centerX +
+                            puff.x *
+                                cloudWidth *
+                                puffEase *
+                                0.62;
+
+                        const y =
+                            centerY +
+                            puff.y *
+                                cloudHeight *
+                                puffEase *
+                                0.58;
+
+                        const radius =
+                            (isMobile
+                                ? 161
+                                : 252) *
+                            puff.s *
+                            (0.25 +
+                                puffEase *
+                                    0.60);
+
+                        const alpha =
+                            0.105 *
+                            puffEase;
+
+                        ctx.save();
+
+                        ctx.globalAlpha =
+                            alpha;
+
+                        ctx.translate(
+                            x,
+                            y
+                        );
+
+                        ctx.scale(
+                            1,
+                            0.82
+                        );
+
+                        ctx.drawImage(
+                            puffSprite,
+                            -radius,
+                            -radius,
+                            radius * 2,
+                            radius * 2
+                        );
+
+                        ctx.restore();
+                    }
+                );
+            }
+
+            /* =================================================
+               DENSE CORE
+            ================================================= */
+
+            if (elapsed > 0.65) {
+                const coreProgress =
+                    Math.min(
+                        1,
+                        (elapsed - 0.65) /
+                            0.7
+                    );
+
+                const coreGradient =
+                    ctx.createRadialGradient(
+                        centerX,
+                        centerY,
+                        0,
+                        centerX,
+                        centerY,
+                        isMobile
+                            ? 322
+                            : 490
+                    );
+
+                coreGradient.addColorStop(
+                    0,
+                    `rgba(${baseColorStr}, ${
+                        0.14 *
+                        coreProgress
+                    })`
+                );
+
+                coreGradient.addColorStop(
+                    0.38,
+                    `rgba(${baseColorStr}, ${
+                        0.10 *
+                        coreProgress
+                    })`
+                );
+
+                coreGradient.addColorStop(
+                    0.72,
+                    `rgba(${baseColorStr}, ${
+                        0.04 *
+                        coreProgress
+                    })`
+                );
+
+                coreGradient.addColorStop(
+                    1,
+                    `rgba(${baseColorStr}, 0)`
+                );
+
+                ctx.fillStyle =
+                    coreGradient;
+
+                ctx.fillRect(
+                    centerX -
+                        (isMobile
+                            ? 322
+                            : 490),
+                    centerY -
+                        (isMobile
+                            ? 238
+                            : 350),
+                    isMobile
+                        ? 644
+                        : 980,
+                    isMobile
+                        ? 560
+                        : 840
+                );
+            }
+
+            /* =================================================
+               READABILITY VIGNETTE
+               (kept neutral/dark regardless of category so text
+               stays legible over any smoke color)
+            ================================================= */
+
+            if (elapsed > 0.5) {
+                const vignetteAlpha =
+                    Math.min(
+                        1,
+                        (elapsed - 0.5) /
+                            0.6
+                    ) * 0.35;
+
+                const vignette =
+                    ctx.createRadialGradient(
+                        centerX,
+                        centerY,
+                        0,
+                        centerX,
+                        centerY,
+                        isMobile
+                            ? 364
+                            : 672
+                    );
+
+                vignette.addColorStop(
+                    0,
+                    `rgba(30, 26, 20, ${vignetteAlpha})`
+                );
+
+                vignette.addColorStop(
+                    0.6,
+                    `rgba(30, 26, 20, ${
+                        vignetteAlpha *
+                        0.55
+                    })`
+                );
+
+                vignette.addColorStop(
+                    1,
+                    "rgba(30, 26, 20, 0)"
+                );
+
+                ctx.fillStyle =
+                    vignette;
+
+                ctx.fillRect(
+                    centerX -
+                        (isMobile
+                            ? 364
+                            : 672),
+                    centerY -
+                        (isMobile
+                            ? 322
+                            : 588),
+                    isMobile
+                        ? 728
+                        : 1344,
+                    isMobile
+                        ? 644
+                        : 1176
+                );
+            }
+
+            /* =================================================
+               SMOKE BASE AT VASE
+            ================================================= */
+
+            const baseProgress =
+                Math.min(
+                    1,
+                    elapsed / 0.75
+                );
+
+            if (baseProgress > 0) {
+                const baseGradient =
+                    ctx.createRadialGradient(
+                        originX,
+                        originY,
+                        0,
+                        originX,
+                        originY,
+                        48
+                    );
+
+                baseGradient.addColorStop(
+                    0,
+                    `rgba(${baseColorStr}, ${
+                        0.30 *
+                        baseProgress
+                    })`
+                );
+
+                baseGradient.addColorStop(
+                    0.38,
+                    `rgba(${baseColorStr}, ${
+                        0.18 *
+                        baseProgress
+                    })`
+                );
+
+                baseGradient.addColorStop(
+                    0.7,
+                    `rgba(${baseColorStr}, ${
+                        0.06 *
+                        baseProgress
+                    })`
+                );
+
+                baseGradient.addColorStop(
+                    1,
+                    `rgba(${baseColorStr}, 0)`
+                );
+
+                ctx.fillStyle =
+                    baseGradient;
+
+                ctx.beginPath();
+
+                ctx.ellipse(
+                    originX,
+                    originY,
+                    24,
+                    40,
+                    0,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fill();
+            }
+
+            /* =================================================
+               CONTINUE ANIMATION
+            ================================================= */
+
+            animationFrame =
+                requestAnimationFrame(
+                    draw
+                );
+        };
+
+        animationFrame =
+            requestAnimationFrame(draw);
+
+        return () => {
+            cancelAnimationFrame(
+                animationFrame
+            );
+
+            window.removeEventListener(
+                "resize",
+                resize
+            );
+        };
+    }, [originX, originY, color]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className={`${styles.smokeCanvas} ${
+                fadingOut
+                    ? styles.smokeCanvasFadeOut
+                    : ""
+            }`}
+            aria-hidden="true"
+        />
+    );
+}
+
+
+
+/* =========================================================
+   EVENTS PAGE
+========================================================= */
+
+export default function EventsPage() {
+    const navigate = useNavigate();
+    // the scene that the "camera" dives into (background, sign
+    // and tents; the nav stays put)
+    const sceneRef =
+        useRef<HTMLDivElement>(null);
+
+    // every pending step of the click sequence, so a new click,
+    // a close or unmounting can cancel them all at once
+    const sequenceTimersRef =
+        useRef<number[]>([]);
+
+    const later = (
+        step: () => void,
+        ms: number
+    ) => {
+        sequenceTimersRef.current.push(
+            window.setTimeout(step, ms)
+        );
+    };
+
+    const clearSequence = () => {
+        sequenceTimersRef.current.forEach(
+            (id) => window.clearTimeout(id)
+        );
+
+        sequenceTimersRef.current = [];
+    };
+
+    const [
+        selectedCategory,
+        setSelectedCategory,
+    ] =
+        useState<Department | null>(null);
+
+    const [
+        spellOrigin,
+        setSpellOrigin,
+    ] =
+        useState<{
+            x: number;
+            y: number;
+            radius: number;
+            wand: boolean;
+        } | null>(null);
+
+    const [
+        spellDepartment,
+        setSpellDepartment,
+    ] =
+        useState<Department | null>(null);
+
+    // the smoke is mounted while rising, then fades away
+    // (.smokeCanvasFadeOut) as the camera dives in
+    const [
+        smokeRising,
+        setSmokeRising,
+    ] = useState(false);
+
+    const [
+        smokeFading,
+        setSmokeFading,
+    ] = useState(false);
+
+    // where the camera dives: the clicked tent's doorway, the
+    // shift that brings it to the middle of the screen, and the
+    // zoom that makes the doorway fill the screen
+    const [
+        dive,
+        setDive,
+    ] =
+        useState<{
+            originX: number;
+            originY: number;
+            x: number;
+            y: number;
+            scale: number;
+        } | null>(null);
+
+    const [
+        diving,
+        setDiving,
+    ] = useState(false);
+
+    // the inside of the tent, shown at the end of the dive
+    const [
+        inside,
+        setInside,
+    ] = useState(false);
+
+    const [
+        leavingTent,
+        setLeavingTent,
+    ] = useState(false);
+
+    const [
+        currentIndex,
+        setCurrentIndex,
+    ] = useState(0);
+
+    // the LEDs currently scattered on each tent; a tent gets a
+    // new random set every time the cursor (or focus) reaches it
+    const [
+        tentLights,
+        setTentLights,
+    ] = useState<Partial<Record<Department, TentLight[]>>>({});
+
+    const lightUpTent = (department: Department) => {
+        setTentLights((prev) => ({
+            ...prev,
+            [department]: scatterLights(),
+        }));
+    };
+
+
+
+    /* =====================================================
+       CLEANUP PENDING TIMERS ON UNMOUNT
+    ===================================================== */
+
+    useEffect(() => {
+        resetSequence();
+        const timers = sequenceTimersRef;
+
+        return () => {
+            timers.current.forEach(
+                (id) => window.clearTimeout(id)
+            );
+        };
+    }, []);
+
+    /* =====================================================
+       RESET THE CLICK SEQUENCE
+    ===================================================== */
+
+    const resetSequence = () => {
+        setSpellOrigin(null);
+        setSpellDepartment(null);
+        setSmokeRising(false);
+        setSmokeFading(false);
+        setDive(null);
+        setDiving(false);
+        setInside(false);
+        setLeavingTent(false);
+    };
+
+    /* =====================================================
+       OPEN CATEGORY
+
+       wand spins (SPELL_SPIN_MS) -> smoke rises
+       (SMOKE_RISE_MS) -> smoke clears and the camera dives
+       into the tent's doorway (DIVE_DELAY_MS, DIVE_MS) ->
+       the inside of the tent fades in -> modal opens.
+    ===================================================== */
+
+    const openCategory = (
+        category: Department,
+        e: ReactMouseEvent<HTMLElement>
+    ) => {
+        clearSequence();
+        resetSequence();
+        setSelectedCategory(null);
+
+        const rect =
+            e.currentTarget.getBoundingClientRect();
+
+        const scene =
+            sceneRef.current?.getBoundingClientRect() ?? {
+                left: 0,
+                top: 0,
+                width: window.innerWidth,
+                height: window.innerHeight,
+            };
+
+        const wand =
+            !prefersReducedMotion();
+
+        // the wand spins over the roof, 40% down the tent
+        setSpellOrigin({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height * 0.4,
+            radius: Math.min(
+                150,
+                Math.max(70, rect.width * 0.42)
+            ),
+            wand,
+        });
+
+        // the doorway sits at the bottom centre of the tent
+        const doorX =
+            rect.left +
+            rect.width * TENT_DOOR.x -
+            scene.left;
+
+        const doorY =
+            rect.top +
+            rect.height * TENT_DOOR.y -
+            scene.top;
+
+        setDive({
+            originX: doorX,
+            originY: doorY,
+            x: scene.width / 2 - doorX,
+            y: scene.height / 2 - doorY,
+            scale: Math.min(
+                DIVE_MAX_SCALE,
+                (Math.max(scene.width, scene.height) *
+                    1.3) /
+                    (rect.width * TENT_DOOR.width)
+            ),
+        });
+
+        setSpellDepartment(category);
+
+        const smokeAt = wand ? SPELL_SPIN_MS : 0;
+        const clearAt = smokeAt + SMOKE_RISE_MS;
+        const diveAt = clearAt + (wand ? DIVE_DELAY_MS : 0);
+        const diveMs = wand ? DIVE_MS : 0;
+
+        later(() => setSmokeRising(true), smokeAt);
+
+        later(() => setSmokeFading(true), clearAt);
+
+        later(() => {
+            setSmokeRising(false);
+            setSmokeFading(false);
+        }, clearAt + SMOKE_FADE_OUT_MS);
+
+        later(() => setDiving(wand), diveAt);
+
+        // the inside fades in over the last part of the dive
+        later(
+            () => setInside(true),
+            diveAt + diveMs * 0.55
+        );
+
+        later(() => {
+            setSelectedCategory(category);
+            setCurrentIndex(0);
+            navigate(`/midway-nights?tent=${slugOf(category)}&from=events`);
+        }, diveAt + diveMs + INSIDE_SETTLE_MS);
+    };
+
+    /* =====================================================
+       CLOSE MODAL
+
+       The modal closes immediately. Behind the inside of the
+       tent the camera jumps back out, then the inside fades
+       away (INSIDE_FADE_OUT_MS, matching .tentInteriorLeaving)
+       to reveal the tents again.
+    ===================================================== */
+
+    const closeModal = () => {
+        clearSequence();
+
+        setSelectedCategory(null);
+        setCurrentIndex(0);
+
+        if (inside) {
+            setDiving(false);
+            setLeavingTent(true);
+
+            later(resetSequence, INSIDE_FADE_OUT_MS);
+        } else {
+            resetSequence();
+        }
+    };
+
+    /* =====================================================
+       CURRENT EVENTS
+    ===================================================== */
+
+    const currentEvents: EventData[] =
+        selectedCategory
+            ? eventsData[
+                  selectedCategory
+              ] ?? []
+            : [];
+
+    /* =====================================================
+       NEXT EVENT
+    ===================================================== */
+
+    const handleNext = () => {
+        if (currentEvents.length <= 1) {
+            return;
+        }
+
+        setCurrentIndex((prev) => {
+            if (
+                prev >=
+                currentEvents.length - 1
+            ) {
+                return 0;
+            }
+
+            return prev + 1;
+        });
+    };
+
+    /* =====================================================
+       PREVIOUS EVENT
+    ===================================================== */
+
+    const handlePrev = () => {
+        if (currentEvents.length <= 1) {
+            return;
+        }
+
+        setCurrentIndex((prev) => {
+            if (prev <= 0) {
+                return (
+                    currentEvents.length - 1
+                );
+            }
+
+            return prev - 1;
+        });
+    };
+
+    /* =====================================================
+       KEYBOARD
+    ===================================================== */
+
+    useEffect(() => {
+        if (!selectedCategory) {
+            return;
+        }
+
+        const handleKeyDown = (
+            e: KeyboardEvent
+        ) => {
+            if (e.key === "Escape") {
+                closeModal();
+            }
+
+            if (e.key === "ArrowRight") {
+                handleNext();
+            }
+
+            if (e.key === "ArrowLeft") {
+                handlePrev();
+            }
+        };
+
+        document.addEventListener(
+            "keydown",
+            handleKeyDown
+        );
+
+        return () => {
+            document.removeEventListener(
+                "keydown",
+                handleKeyDown
+            );
+        };
+    }, [
+        selectedCategory,
+        currentEvents.length,
+    ]);
+
+    /* =====================================================
+       CURRENT EVENT
+    ===================================================== */
+
+    const currentEvent =
+        currentEvents[currentIndex];
+
+    const smokeColor =
+        spellDepartment
+            ? shadeOf(spellDepartment).smoke
+            : DEFAULT_SMOKE_COLOR;
+
+    return (
+        <div
+            className={
+                styles.fullPageContainer
+            }
+        >
+            {/* =================================================
+                SCENE
+
+                Everything the camera dives into: background,
+                sign and tents.
+            ================================================= */}
+
+            <div
+                ref={sceneRef}
+                className={styles.scene}
+                data-dive={diving ? "in" : undefined}
+                style={
+                    dive
+                        ? ({
+                              "--dive-origin-x": `${dive.originX}px`,
+                              "--dive-origin-y": `${dive.originY}px`,
+                              "--dive-x": `${dive.x}px`,
+                              "--dive-y": `${dive.y}px`,
+                              "--dive-scale": dive.scale,
+                              "--dive-ms": `${DIVE_MS}ms`,
+                          } as CSSProperties)
+                        : undefined
+                }
+            >
+
+
+                {/* =================================================
+                    DEPARTMENT TENTS SCATTERED ACROSS CARNIVAL GROUNDS
+                    Each tent sits firmly on the land with depth, scale,
+                    perspective, and rich ground contact shadows.
+                ================================================= */}
+
+                                {/* =================================================
+                    SPARSE CARNIVAL CROWD
+                    Subtle visitors moving naturally along the pathways
+                    between tents, with realistic perspective & shadows.
+                ================================================= */}
+                <div className={styles.crowdLayer} aria-hidden="true">
+                    <div className={`${styles.crowdCluster} ${styles.crowdLeft}`}>
+                        <svg viewBox="0 0 46 72" className={styles.crowdSvg}>
+                            {/* Figure 1 - walking toward tent */}
+                            <ellipse cx="14" cy="70" rx="12" ry="2.5" className={styles.crowdShadow} />
+                            <path d="M14 6 C16.5 6 18 8 18 11 C18 14 16 16 14 16 C11.5 16 10 14 10 11 C10 8 11.5 6 14 6 Z" className={styles.personBody} />
+                            <path d="M9 17 C12 16.5 16 16.5 19 17 C20.5 18 21 24 20.5 30 L20 40 L16.5 40 L17 28 L15 28 L14 42 L11 42 L12 28 L10.5 28 L8 38 L6.5 37 C6 30 7 18 9 17 Z" className={styles.personBody} />
+                            <path d="M11 42 L10 58 L8 68 L11.5 68 L13 56 L14 42 Z" className={styles.personLegs} />
+                            <path d="M14 42 L15.5 54 L17.5 68 L14.5 68 L13.5 56 L13 42 Z" className={styles.personLegs} />
+                            <path d="M14 6 C17 6 18 8.5 18 11 C18 16 19.5 23 20 30" className={styles.personRimLight} />
+
+                            {/* Figure 2 - standing companion */}
+                            <ellipse cx="33" cy="70" rx="11" ry="2.2" className={styles.crowdShadow} />
+                            <path d="M33 9 C35.5 9 37 11 37 13.5 C37 16 35 18 33 18 C30.5 18 29 16 29 13.5 C29 11 30.5 9 33 9 Z" className={styles.personBody} />
+                            <path d="M28 19 C31 18.5 35 18.5 38 19 C39.5 20.5 40 26 39.5 33 L36.5 42 L34 42 L35 29 L33 29 L32 42 L29.5 42 L31 29 L29 29 L27 37 C26 30 26.5 21 28 19 Z" className={styles.personBody} />
+                            <path d="M30 42 L29 57 L27 68 L30.5 68 L32 56 L31.5 42 Z" className={styles.personLegs} />
+                            <path d="M32 42 L33.5 54 L35.5 68 L32.5 68 L31.5 56 L31 42 Z" className={styles.personLegs} />
+                            <path d="M33 9 C36 9 37 11 37 14 C37 19 39 25 39 32" className={styles.personRimLight} />
+                        </svg>
+                    </div>
+
+                    <div className={`${styles.crowdCluster} ${styles.crowdCenter}`}>
+                        <svg viewBox="0 0 68 76" className={styles.crowdSvg}>
+                            {/* Group of 3 strolling along center pathway */}
+                            <ellipse cx="16" cy="73" rx="11" ry="2.2" className={styles.crowdShadow} />
+                            <ellipse cx="36" cy="74" rx="12" ry="2.5" className={styles.crowdShadow} />
+                            <ellipse cx="54" cy="73" rx="10" ry="2" className={styles.crowdShadow} />
+
+                            {/* Person A */}
+                            <path d="M16 8 C18.2 8 19.5 9.8 19.5 12.2 C19.5 14.8 17.8 16.5 16 16.5 C13.8 16.5 12.5 14.8 12.5 12.2 C12.5 9.8 13.8 8 16 8 Z" className={styles.personBody} />
+                            <path d="M12 17.5 C14.5 17 18 17 20.5 17.5 C22 19 22.5 25 22 32 L20 42 L17.5 42 L18 30 L16 30 L15 43 L12.5 43 L14 30 L12.5 30 L10 39 C9.5 32 10 20 12 17.5 Z" className={styles.personBody} />
+                            <path d="M13 43 L12 59 L10 71 L13 71 L14.5 58 L14 43 Z" className={styles.personLegs} />
+                            <path d="M15 43 L16.5 56 L18 71 L15 71 L14 57 L13.5 43 Z" className={styles.personLegs} />
+                            <path d="M16 8 C18.5 8 19.5 10 19.5 13 C19.5 18 21.5 24 21.5 31" className={styles.personRimLight} />
+
+                            {/* Person B (center taller) */}
+                            <path d="M36 5 C38.5 5 40 7 40 9.8 C40 12.5 38.2 14.5 36 14.5 C33.5 14.5 32 12.5 32 9.8 C32 7 33.5 5 36 5 Z" className={styles.personBody} />
+                            <path d="M31 15.5 C34 15 38.5 15 41.5 15.5 C43 17 43.5 23.5 43 31 L42 42 L39.5 42 L40 28 L37.5 28 L36.5 43 L34 43 L35.5 28 L33.5 28 L31 38 C30 31 30 18 31 15.5 Z" className={styles.personBody} />
+                            <path d="M34.5 43 L33.5 59 L31.5 72 L35 72 L36.5 58 L35.5 43 Z" className={styles.personLegs} />
+                            <path d="M36.5 43 L38 56 L40 72 L37 72 L35.8 58 L35.5 43 Z" className={styles.personLegs} />
+                            <path d="M36 5 C39 5 40 7.5 40 11 C40 17 42.5 24 42.5 31" className={styles.personRimLight} />
+
+                            {/* Person C (slight backpack) */}
+                            <path d="M54 10 C56 10 57.5 11.5 57.5 13.8 C57.5 16 56 17.5 54 17.5 C52 17.5 50.5 16 50.5 13.8 C50.5 11.5 52 10 54 10 Z" className={styles.personBody} />
+                            <path d="M50 18.5 C52.5 18 56 18 58 18.5 C59.5 20 60 25 59.5 32 L58 42 L55.5 42 L56 30 L54 30 L53 43 L50.5 43 L52 30 L50.5 30 L48.5 38 C48 31 48.5 21 50 18.5 Z" className={styles.personBody} />
+                            <path d="M51 43 L50 58 L48 71 L51 71 L52.5 57 L52 43 Z" className={styles.personLegs} />
+                            <path d="M53 43 L54.5 56 L56 71 L53 71 L52 57 L51.5 43 Z" className={styles.personLegs} />
+                            <path d="M54 10 C56.5 10 57.5 12 57.5 14.5 C57.5 19 59.5 25 59 31" className={styles.personRimLight} />
+                        </svg>
+                    </div>
+
+                    <div className={`${styles.crowdCluster} ${styles.crowdRight}`}>
+                        <svg viewBox="0 0 52 74" className={styles.crowdSvg}>
+                            {/* Two friends chatting near the EEE / Mechanical lane */}
+                            <ellipse cx="17" cy="71" rx="11" ry="2.2" className={styles.crowdShadow} />
+                            <ellipse cx="36" cy="71" rx="11" ry="2.2" className={styles.crowdShadow} />
+
+                            {/* Person A */}
+                            <path d="M17 7 C19.5 7 21 8.8 21 11.5 C21 14.2 19.5 16 17 16 C14.5 16 13 14.2 13 11.5 C13 8.8 14.5 7 17 7 Z" className={styles.personBody} />
+                            <path d="M13 17 C15.5 16.5 19 16.5 21.5 17 C23 18.5 23.5 24.5 23 31.5 L21.5 41 L19 41 L19.5 29 L17.5 29 L16.5 42 L14 42 L15.5 29 L14 29 L11.5 38 C11 31 11.5 19 13 17 Z" className={styles.personBody} />
+                            <path d="M14.5 42 L13.5 57 L11.5 69 L14.5 69 L16 56 L15.5 42 Z" className={styles.personLegs} />
+                            <path d="M16.5 42 L18 55 L20 69 L17 69 L16 56 L15.5 42 Z" className={styles.personLegs} />
+                            <path d="M17 7 C19.5 7 21 9 21 12 C21 17 22.8 24 22.8 30" className={styles.personRimLight} />
+
+                            {/* Person B */}
+                            <path d="M36 8 C38.5 8 40 10 40 12.5 C40 15 38.5 17 36 17 C33.5 17 32 15 32 12.5 C32 10 33.5 8 36 8 Z" className={styles.personBody} />
+                            <path d="M32 18 C34.5 17.5 38 17.5 40.5 18 C42 19.5 42.5 25 42 32 L39.5 41.5 L37 41.5 L37.5 29 L35.5 29 L34.5 42 L32 42 L33.5 29 L32 29 L29.5 38 C29 31 29.5 20 32 18 Z" className={styles.personBody} />
+                            <path d="M33.5 42 L32.5 57 L30.5 69 L33.5 69 L35 56 L34.5 42 Z" className={styles.personLegs} />
+                            <path d="M35.5 42 L37 55 L39 69 L36 69 L35 56 L34.5 42 Z" className={styles.personLegs} />
+                            <path d="M36 8 C38.5 8 40 10 40 13 C40 18 41.8 24 41.8 30" className={styles.personRimLight} />
+                        </svg>
+                    </div>
+
+                    <div className={`${styles.crowdCluster} ${styles.crowdFarRight}`}>
+                        <svg viewBox="0 0 46 72" className={styles.crowdSvg}>
+                            {/* Distant pair on far right pathway */}
+                            <ellipse cx="14" cy="69" rx="10" ry="2" className={styles.crowdShadow} />
+                            <ellipse cx="32" cy="70" rx="10" ry="2" className={styles.crowdShadow} />
+
+                            <path d="M14 8 C16 8 17.5 9.8 17.5 12 C17.5 14.5 16 16 14 16 C12 16 10.5 14.5 10.5 12 C10.5 9.8 12 8 14 8 Z" className={styles.personBody} />
+                            <path d="M10 17 C12.5 16.5 16 16.5 18 17 C19.5 18.5 20 24 19.5 31 L18 41 L15.5 41 L16 29 L14 29 L13 42 L10.5 42 L12 29 L10.5 29 L8.5 38 C8 31 8.5 19 10 17 Z" className={styles.personBody} />
+                            <path d="M11.5 42 L10.5 57 L8.5 68 L11.5 68 L13 56 L12.5 42 Z" className={styles.personLegs} />
+                            <path d="M13.5 42 L15 55 L17 68 L14 68 L13 56 L12.5 42 Z" className={styles.personLegs} />
+                            <path d="M14 8 C16.5 8 17.5 10 17.5 12.5 C17.5 17 19 23 19 29" className={styles.personRimLight} />
+
+                            <path d="M32 9 C34 9 35.5 10.8 35.5 13 C35.5 15.5 34 17 32 17 C30 17 28.5 15.5 28.5 13 C28.5 10.8 30 9 32 9 Z" className={styles.personBody} />
+                            <path d="M28 18 C30.5 17.5 34 17.5 36 18 C37.5 19.5 38 25 37.5 32 L36 41.5 L33.5 41.5 L34 29 L32 29 L31 42 L28.5 42 L30 29 L28.5 29 L26.5 38 C26 31 26.5 20 28 18 Z" className={styles.personBody} />
+                            <path d="M29.5 42 L28.5 57 L26.5 68 L29.5 68 L31 56 L30.5 42 Z" className={styles.personLegs} />
+                            <path d="M31.5 42 L33 55 L35 68 L32 68 L31 56 L30.5 42 Z" className={styles.personLegs} />
+                            <path d="M32 9 C34.5 9 35.5 11 35.5 13.5 C35.5 18 37 24 37 30" className={styles.personRimLight} />
+                        </svg>
+                    </div>
+                </div>
+
+<section
+                    className={styles.tentStage}
+                    aria-label="Departments"
+                >
+                    {/* Department tents placed organically across the terrain */}
+                    {departments.map((department) => (
+                        <button
+                            key={slugOf(department)}
+                            type="button"
+                            className={styles.tent}
+                            data-department={slugOf(department)}
+                            data-active={
+                                spellDepartment === department || undefined
+                            }
+                            onClick={(e) =>
+                                openCategory(
+                                    department,
+                                    e
+                                )
+                            }
+                            onPointerEnter={() =>
+                                lightUpTent(department)
+                            }
+                            onFocus={() =>
+                                lightUpTent(department)
+                            }
+                        >
+                            <span
+                                className={styles.tentBody}
+                                style={
+                                    {
+                                        "--label-length":
+                                            department.length,
+                                    } as CSSProperties
+                                }
+                            >
+                                <img
+                                    src={
+                                        shadeOf(department)
+                                            .src
+                                    }
+                                    alt=""
+                                />
+
+                                <span
+                                    className={
+                                        styles.tentLights
+                                    }
+                                    aria-hidden="true"
+                                >
+                                    {tentLights[
+                                        department
+                                    ]?.map((light) => (
+                                        <span
+                                            key={light.id}
+                                            className={
+                                                styles.led
+                                            }
+                                            style={
+                                                {
+                                                    left: `${light.x}%`,
+                                                    top: `${light.y}%`,
+                                                    "--led-color":
+                                                        light.color,
+                                                    "--led-size": `${light.size}cqi`,
+                                                    "--led-fall": `${light.fall}s`,
+                                                    "--led-twinkle": `${light.twinkle}s`,
+                                                } as CSSProperties
+                                            }
+                                        />
+                                    ))}
+                                </span>
+
+                                <span
+                                    className={
+                                        styles.tentLabel
+                                    }
+                                >
+                                    {department}
+                                </span>
+                            </span>
+                        </button>
+                    ))}
+                </section>
+
+            </div>
+
+            {/* =================================================
+                INSIDE THE TENT
+            ================================================= */}
+
+            {inside && spellDepartment && (
+                <div
+                    className={`${styles.tentInterior} ${
+                        leavingTent
+                            ? styles.tentInteriorLeaving
+                            : ""
+                    }`}
+                    data-image={
+                        TENT_INTERIORS[spellDepartment]
+                            ? true
+                            : undefined
+                    }
+                    style={
+                        {
+                            "--interior-color":
+                                shadeOf(spellDepartment)
+                                    .smoke,
+                            ...(TENT_INTERIORS[
+                                spellDepartment
+                            ]
+                                ? {
+                                      backgroundImage: `url(${TENT_INTERIORS[spellDepartment]})`,
+                                  }
+                                : {}),
+                        } as CSSProperties
+                    }
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* =================================================
+                SMOKE (rises once the wand has spun)
+            ================================================= */}
+
+            {spellOrigin && smokeRising && (
+                <SmokeCanvas
+                    originX={
+                        spellOrigin.x
+                    }
+                    originY={
+                        spellOrigin.y
+                    }
+                    color={
+                        smokeColor
+                    }
+                    fadingOut={smokeFading}
+                />
+            )}
+
+            {/* =================================================
+                MAGIC WAND
+            ================================================= */}
+
+            {spellOrigin?.wand && (
+                <WandSpell
+                    originX={
+                        spellOrigin.x
+                    }
+                    originY={
+                        spellOrigin.y
+                    }
+                    radius={
+                        spellOrigin.radius
+                    }
+                    color={
+                        smokeColor
+                    }
+                    fadingOut={leavingTent}
+                />
+            )}
+
+            {/* =================================================
+                MODAL
+            ================================================= */}
+
+            {selectedCategory !== null && (
+                <div
+                    className={
+                        styles.modalOverlay
+                    }
+                    onClick={closeModal}
+                >
+                    <div
+                        className={
+                            currentEvents.length ===
+                            0
+                                ? styles.noEventsModal
+                                : styles.modal
+                        }
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+                        {/* =====================================
+                            CLOSE
+                        ===================================== */}
+
+                        <button
+                            className={
+                                styles.closeButton
+                            }
+                            onClick={
+                                closeModal
+                            }
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+
+                        {/* =====================================
+                            NO EVENTS
+                        ===================================== */}
+
+                        {currentEvents.length ===
+                        0 ? (
+                            <div
+                                className={
+                                    styles.noEventsContent
+                                }
+                            >
+                                <h2>
+                                    No Events Found
+                                </h2>
+
+                                <p>
+                                    Alas! There are no{" "}
+                                    {selectedCategory}{" "}
+                                    events to discover
+                                    at the moment.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* =================================
+                                   EVENT
+                                ================================= */}
+
+                                <div
+                                    className={
+                                        styles.modalContent
+                                    }
+                                >
+                                    {/* =========================
+                                        LEFT
+                                    ========================= */}
+
+                                    <div
+                                        className={
+                                            styles.eventInfo
+                                        }
+                                    >
+                                        <h2>
+                                            {
+                                                currentEvent.name
+                                            }
+                                        </h2>
+
+                                        {currentEvent.description && (
+                                            <p
+                                                className={
+                                                    styles.description
+                                                }
+                                            >
+                                                {
+                                                    currentEvent.description
+                                                }
+                                            </p>
+                                        )}
+
+                                        {/* DETAILS */}
+
+                                        <div
+                                            className={
+                                                styles.eventDetails
+                                            }
+                                        >
+                                            {/* CLUB */}
+
+                                            {currentEvent.club_name && (
+                                                <div
+                                                    className={
+                                                        styles.detail
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.icon
+                                                        }
+                                                    >
+                                                        ◆
+                                                    </span>
+
+                                                    <span>
+                                                        {
+                                                            currentEvent.club_name
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* VENUE */}
+
+                                            {currentEvent.venue && (
+                                                <div
+                                                    className={
+                                                        styles.detail
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.icon
+                                                        }
+                                                    >
+                                                        ⌖
+                                                    </span>
+
+                                                    <span>
+                                                        {
+                                                            currentEvent.venue
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* RULEBOOK */}
+
+                                        {currentEvent.rulebook && (
+                                            <a
+                                                href={
+                                                    "https://docs.google.com/document/d/19yAh7FlGDDVqDHc4ZiUbPv1kwSmhOCYdFTghMzR0UAE/edit?tab=t.0"
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={
+                                                    styles.rulebookButton
+                                                }
+                                            >
+                                                Rulebook
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* =========================
+                                        RIGHT IMAGE
+                                    ========================= */}
+
+                                    <div
+                                        className={
+                                            styles.eventImage
+                                        }
+                                    >
+                                        {currentEvent.image_url ? (
+                                            <img
+                                                src={
+                                                    currentEvent.image_url
+                                                }
+                                                alt={
+                                                    currentEvent.name
+                                                }
+                                            />
+                                        ) : (
+                                            <div
+                                                className={
+                                                    styles.imagePlaceholder
+                                                }
+                                            >
+                                                <span>
+                                                    {
+                                                        currentEvent.name
+                                                    }
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* =================================
+                                    EVENT NAVIGATION
+                                ================================= */}
+
+                                {currentEvents.length >
+                                    1 && (
+                                    <div
+                                        className={
+                                            styles.navigation
+                                        }
+                                    >
+                                        <button
+                                            className={
+                                                styles.navButton
+                                            }
+                                            onClick={
+                                                handlePrev
+                                            }
+                                            aria-label="Previous event"
+                                        >
+                                            ‹
+                                        </button>
+
+                                        <span
+                                            className={
+                                                styles.counter
+                                            }
+                                        >
+                                            {
+                                                currentIndex +
+                                                1
+                                            }
+                                            {" / "}
+                                            {
+                                                currentEvents.length
+                                            }
+                                        </span>
+
+                                        <button
+                                            className={
+                                                styles.navButton
+                                            }
+                                            onClick={
+                                                handleNext
+                                            }
+                                            aria-label="Next event"
+                                        >
+                                            ›
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
+        </div>
+    );
+}

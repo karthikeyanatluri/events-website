@@ -1,0 +1,2542 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+  rel="stylesheet">
+<style>
+  /* Layout concept: one pinned night-sky stage. HTML event cards fly toward a camera riding a steel coaster; a ticket-stub HUD at the bottom shows the stop. A decorative Ferris wheel is anchored bottom-right. */
+  :root {
+    --night-950: #060716;
+    --night-900: #0b0d2a;
+    --night-700: #1a1b4b;
+    --violet: #8e44ff;
+    --magenta: #ff3aa8;
+    --cyan: #3ae3ff;
+    --gold: #ffc65c;
+    --text: #f5f3ff;
+    --muted: #bdbaea;
+    --line: rgba(190, 180, 255, .24);
+    --glass: rgba(13, 12, 44, .76);
+    --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+    --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'DM Mono', ui-monospace, Menlo, Consolas, monospace;
+    --nav-h: 64px;
+    color-scheme: dark;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box
+  }
+
+  html {
+    scroll-behavior: auto
+  }
+
+  body {
+    margin: 0;
+    background: var(--night-950);
+    color: var(--text);
+    font: 400 15px/1.5 var(--font-body);
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased
+  }
+
+  a {
+    color: inherit
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+    border-radius: 4px
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0
+  }
+
+  /* ---------- Navigation ---------- */
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+    background: linear-gradient(to bottom, rgba(6, 7, 22, .92), rgba(6, 7, 22, .55) 60%, rgba(6, 7, 22, 0))
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font: 800 24px/1 var(--font-display);
+    letter-spacing: .08em;
+    text-transform: uppercase
+  }
+
+  .brand .bulb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255, 198, 92, .22), 0 0 14px 2px rgba(255, 198, 92, .8)
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 22px
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: .03em;
+    color: var(--muted)
+  }
+
+  .nav-links a:hover {
+    color: var(--text)
+  }
+
+  .nav-links a.btn {
+    color: #1a1030
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font: 700 14px/1 var(--font-body);
+    letter-spacing: .02em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .15s ease, background-color .15s ease, border-color .15s ease
+  }
+
+  .btn.small {
+    min-height: 36px;
+    padding: 0 14px
+  }
+
+  .btn.primary {
+    background: var(--gold);
+    color: #1a1030
+  }
+
+  .btn.primary:hover {
+    background: #ffd584
+  }
+
+  .btn.ghost {
+    background: rgba(255, 255, 255, .05);
+    border-color: var(--line);
+    color: var(--text)
+  }
+
+  .btn.ghost:hover {
+    border-color: rgba(255, 255, 255, .5)
+  }
+
+  .btn:active {
+    transform: translateY(1px)
+  }
+
+  /* ---------- Showcase stage ---------- */
+  .showcase {
+    position: relative;
+    height: 100vh;
+    height: 100svh;
+    min-height: 560px;
+    overflow: hidden;
+    background: var(--night-950);
+    isolation: isolate
+  }
+
+  #gl {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0
+  }
+
+  .shade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(130% 95% at 50% 46%, transparent 48%, rgba(4, 4, 16, .6) 100%), linear-gradient(to bottom, rgba(6, 7, 22, .45), transparent 22%)
+  }
+
+  .hero {
+    position: absolute;
+    z-index: 3;
+    left: 0;
+    right: 0;
+    top: calc(var(--nav-h) + 3.5vh);
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    text-align: center;
+    pointer-events: none;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px))
+  }
+
+  .kicker {
+    margin: 0;
+    font: 500 12px/1.2 var(--font-mono);
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--gold)
+  }
+
+  .hero h1 {
+    margin: 0;
+    max-width: 100%;
+    font: 900 clamp(60px, 12.5vw, 170px)/.84 var(--font-display);
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    background: linear-gradient(180deg, #ffffff 8%, #eadcff 52%, #b48bff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 30px rgba(142, 68, 255, .55))
+  }
+
+  .cue {
+    margin: 6px 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font: 500 12px/1 var(--font-mono);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted)
+  }
+
+  .chev {
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--gold);
+    border-bottom: 2px solid var(--gold);
+    transform: rotate(45deg);
+    animation: nudge 1.6s ease-in-out infinite
+  }
+
+  @keyframes nudge {
+    50% {
+      transform: translateY(5px) rotate(45deg)
+    }
+  }
+
+  /* ---------- Event cards ---------- */
+  .cards {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    perspective: 1400px;
+    perspective-origin: 50% 42%
+  }
+
+  .card {
+    --poster-h: clamp(108px, 17vh, 158px);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(420px, 86vw);
+    visibility: hidden;
+    transform: translate(-50%, -50%);
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+    pointer-events: none
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: -1;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--violet), var(--magenta) 55%, var(--cyan));
+    filter: blur(24px);
+    opacity: .5
+  }
+
+  .card.is-live {
+    pointer-events: auto
+  }
+
+  .card-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+    background: var(--glass);
+    box-shadow: inset 0 0 0 1px var(--line);
+    -webkit-mask: radial-gradient(circle at 0 calc(26px + var(--poster-h)), #0000 11px, #000 11.5px) left/51% 100% no-repeat, radial-gradient(circle at 100% calc(26px + var(--poster-h)), #0000 11px, #000 11.5px) right/51% 100% no-repeat;
+    mask: radial-gradient(circle at 0 calc(26px + var(--poster-h)), #0000 11px, #000 11.5px) left/51% 100% no-repeat, radial-gradient(circle at 100% calc(26px + var(--poster-h)), #0000 11px, #000 11.5px) right/51% 100% no-repeat
+  }
+
+  .card.near .card-body {
+    backdrop-filter: blur(14px) saturate(1.35);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35)
+  }
+
+  .card-body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #04051a;
+    opacity: var(--dim, 0);
+    pointer-events: none
+  }
+
+  .marquee {
+    position: relative;
+    flex: none;
+    height: 26px;
+    background: linear-gradient(180deg, rgba(255, 198, 92, .12), transparent)
+  }
+
+  .marquee.bottom {
+    height: 18px;
+    background: linear-gradient(0deg, rgba(255, 198, 92, .1), transparent)
+  }
+
+  .marquee::before,
+  .marquee::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    animation: twinkle 1.4s steps(1) infinite;
+    background: radial-gradient(circle at 50% 50%, #fff3c9 0 1.6px, #ffc65c 2.3px, rgba(255, 198, 92, .3) 4px, transparent 6.5px) 0 0/16px 100% repeat-x
+  }
+
+  .marquee::after {
+    background-position: 8px 0;
+    animation-delay: -.7s
+  }
+
+  @keyframes twinkle {
+    0% {
+      opacity: 1
+    }
+
+    50% {
+      opacity: .18
+    }
+  }
+
+  .poster {
+    position: relative;
+    flex: none;
+    height: var(--poster-h);
+    background: var(--night-900)
+  }
+
+  .poster img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block
+  }
+
+  .poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(11, 13, 42, .85), transparent 55%)
+  }
+
+  .tag {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: rgba(6, 7, 22, .68);
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: .12em;
+    text-transform: uppercase
+  }
+
+  .tag.cat {
+    left: 12px
+  }
+
+  .tag.stop {
+    right: 12px;
+    color: var(--gold)
+  }
+
+  .perf {
+    flex: none;
+    height: 0;
+    margin: 0 18px;
+    border-top: 2px dashed rgba(255, 255, 255, .2)
+  }
+
+  .info {
+    padding: 14px 20px 8px
+  }
+
+  .info h2 {
+    margin: 0 0 10px;
+    font: 800 clamp(30px, 3.6vh + 14px, 42px)/.92 var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: .01em;
+    text-wrap: balance
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    margin: 0 0 10px
+  }
+
+  .meta div {
+    min-width: 0
+  }
+
+  .meta dt {
+    margin: 0 0 3px;
+    font: 500 10.5px/1 var(--font-mono);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold)
+  }
+
+  .meta dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere
+  }
+
+  .info p {
+    margin: 0 0 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 20px 14px
+  }
+
+  /* ---------- Ride HUD ---------- */
+  .hud {
+    position: absolute;
+    z-index: 6;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    pointer-events: none;
+    padding: 44px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: linear-gradient(to top, rgba(6, 7, 22, .82), rgba(6, 7, 22, .45) 55%, rgba(6, 7, 22, 0))
+  }
+
+  .now {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    text-align: center
+  }
+
+  .now-n {
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold)
+  }
+
+  .now-t {
+    font: 700 18px/1 var(--font-display);
+    letter-spacing: .06em;
+    text-transform: uppercase
+  }
+
+  .track {
+    position: relative;
+    width: min(380px, 100%);
+    pointer-events: auto
+  }
+
+  .track::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    height: 2px;
+    background: var(--line);
+    transform: translateY(-50%)
+  }
+
+  .fill {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--violet), var(--magenta), var(--gold));
+    transform: translateY(-50%) scaleX(var(--p, 0));
+    transform-origin: 0 50%
+  }
+
+  .stops {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    list-style: none
+  }
+
+  .dot {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer
+  }
+
+  .dot::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--night-700);
+    border: 2px solid var(--muted);
+    transition: transform .2s ease, background-color .2s ease, border-color .2s ease
+  }
+
+  .dot.seen::before {
+    background: var(--violet);
+    border-color: var(--violet)
+  }
+
+  .dot.on::before {
+    transform: scale(1.5);
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 12px 2px rgba(255, 198, 92, .7)
+  }
+
+  /* ---------- Plan your night ---------- */
+  .plan {
+    position: relative;
+    z-index: 2;
+    background: linear-gradient(180deg, var(--night-950), var(--night-900) 45%, var(--night-950));
+    padding-block: clamp(72px, 12vh, 140px) 40px
+  }
+
+  .plan-inner {
+    width: 100%;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px))
+  }
+
+  .plan h2 {
+    margin: 0 0 36px;
+    font: 900 clamp(46px, 8vw, 100px)/.88 var(--font-display);
+    text-transform: uppercase;
+    text-wrap: balance
+  }
+
+  .plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 32px
+  }
+
+  .plan-grid>div {
+    min-width: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 14px
+  }
+
+  .plan h3 {
+    margin: 0 0 12px;
+    font: 500 12px/1 var(--font-mono);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold)
+  }
+
+  .plan dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 18px;
+    margin: 0
+  }
+
+  .plan dt {
+    color: var(--muted)
+  }
+
+  .plan dd {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right
+  }
+
+  .plan ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted)
+  }
+
+  .plan li {
+    margin-bottom: 8px
+  }
+
+  .plan .foot {
+    margin-top: 64px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px
+  }
+
+  /* ---------- Event sheet ---------- */
+  dialog.sheet {
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100svh - 32px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    overflow: visible
+  }
+
+  dialog.sheet::backdrop {
+    background: rgba(4, 4, 16, .76);
+    backdrop-filter: blur(4px)
+  }
+
+  .sheet-card {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100svh - 32px);
+    overflow: auto;
+    border-radius: 18px;
+    background: var(--night-900);
+    box-shadow: inset 0 0 0 1px var(--line), 0 30px 80px -20px #000
+  }
+
+  .sheet-card img {
+    display: block;
+    width: 100%;
+    height: clamp(120px, 26vh, 210px);
+    object-fit: cover
+  }
+
+  .sheet-body {
+    padding: 20px 22px 22px
+  }
+
+  .sheet-body .chip {
+    display: inline-block;
+    margin: 0 0 10px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: .12em;
+    text-transform: uppercase
+  }
+
+  .sheet-body h2 {
+    margin: 0 0 14px;
+    font: 800 clamp(36px, 6vw, 52px)/.9 var(--font-display);
+    text-transform: uppercase
+  }
+
+  .sheet-body p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    max-width: 60ch
+  }
+
+  .sheet-body .actions {
+    padding: 0
+  }
+
+  .toast {
+    position: fixed;
+    z-index: 80;
+    left: 50%;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    transform: translate(-50%, 20px);
+    max-width: min(440px, calc(100vw - 32px));
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--night-700);
+    border: 1px solid var(--line);
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0)
+  }
+
+  /* ---------- Narrow screens ---------- */
+  @media (max-width:640px) {
+    .nav-links a:not(.btn) {
+      display: none
+    }
+
+    .brand {
+      font-size: 21px
+    }
+
+    .hero {
+      top: calc(var(--nav-h) + 2vh)
+    }
+
+    .info {
+      padding: 12px 16px 6px
+    }
+
+    .actions {
+      padding: 0 16px 12px
+    }
+
+    .now-t {
+      font-size: 16px
+    }
+  }
+
+  /* ---------- Static layout (reduced motion, or the 3D libraries could not load) ---------- */
+  .showcase.is-static {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible
+  }
+
+  .is-static #gl {
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    height: 100svh
+  }
+
+  .is-static .shade {
+    position: fixed
+  }
+
+  .is-static .hero {
+    position: relative;
+    top: auto;
+    padding-top: calc(var(--nav-h) + 6vh);
+    padding-bottom: 24px
+  }
+
+  .is-static .cards {
+    position: relative;
+    inset: auto;
+    pointer-events: auto;
+    perspective: none;
+    display: grid;
+    justify-items: center;
+    gap: 36px;
+    padding: 32px max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px))
+  }
+
+  .is-static .card {
+    position: relative;
+    left: auto;
+    top: auto;
+    visibility: visible;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    will-change: auto
+  }
+
+  .is-static .card .card-body {
+    backdrop-filter: blur(14px) saturate(1.35)
+  }
+
+  .is-static .hud,
+  .is-static .cue {
+    display: none
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important
+    }
+
+    .marquee::after {
+      opacity: .5
+    }
+  }
+
+  /* ---------- Illustrated cosmic carnival home + department village ---------- */
+  .carnival-nav {
+    background: linear-gradient(180deg, rgba(7, 5, 26, .78), rgba(7, 5, 26, .16));
+    padding-top: 18px
+  }
+
+  .carnival-nav .brand {
+    font-size: clamp(19px, 2vw, 27px);
+    letter-spacing: .07em;
+    text-shadow: 0 2px 18px #000
+  }
+
+  .carnival-nav .bulb {
+    background: #ffe6a0;
+    box-shadow: 0 0 0 4px #ffc65c30, 0 0 24px #ffc65c
+  }
+
+  .carnival-nav .nav-links {
+    padding: 9px 12px 9px 22px;
+    border: 1px solid #ffffff30;
+    border-radius: 999px;
+    background: #17112b9c;
+    backdrop-filter: blur(16px);
+    gap: clamp(12px, 2.4vw, 30px)
+  }
+
+  .carnival-nav .nav-links a:not(.btn) {
+    color: #fff1d2;
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase
+  }
+
+  .carnival-home {
+    height: min(940px, 100svh);
+    min-height: 690px;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 48% 48%, #f6a33c 0, #9b3b72 13%, #38144f 34%, transparent 57%), radial-gradient(ellipse at 72% 35%, #f47737 0, #50205f 25%, transparent 50%), linear-gradient(115deg, #070d2d 0%, #120c36 50%, #060d2a 100%)
+  }
+
+  .carnival-home:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: radial-gradient(1px 1px at 12% 22%, #fff 99%, transparent), radial-gradient(2px 2px at 28% 14%, #ffe6aa 99%, transparent), radial-gradient(1px 1px at 67% 21%, #fff 99%, transparent), radial-gradient(2px 2px at 84% 35%, #fff 99%, transparent), radial-gradient(1px 1px at 51% 11%, #fff 99%, transparent), radial-gradient(1px 1px at 92% 12%, #fff 99%, transparent);
+    background-size: 190px 170px, 280px 240px, 230px 210px, 310px 250px, 270px 200px, 180px 190px;
+    opacity: .9
+  }
+
+  .starfield {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 65%, transparent 20%, #05091d70 100%)
+  }
+
+  .moon-disc {
+    position: absolute;
+    z-index: -1;
+    width: clamp(300px, 47vw, 680px);
+    aspect-ratio: 1;
+    left: 50%;
+    top: 8%;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff4d7, #f4dca4 58%, #dcae76);
+    box-shadow: 0 0 80px #ffd98c48, 0 0 180px #f6b65a24;
+    opacity: .96
+  }
+
+  .moon-disc:after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at 27% 39%, #bd9b7430 0 2%, transparent 3%), radial-gradient(ellipse at 64% 65%, #bd9b7430 0 5%, transparent 6%), radial-gradient(ellipse at 48% 24%, #bd9b7424 0 3%, transparent 4%)
+  }
+
+  .cosmic-cloud {
+    position: absolute;
+    width: 50vw;
+    height: 15vw;
+    min-height: 90px;
+    filter: blur(28px);
+    opacity: .22;
+    border-radius: 50%;
+    background: #ec7b48;
+    transform: rotate(-18deg);
+    pointer-events: none
+  }
+
+  .cloud-a {
+    top: 19%;
+    left: -10%
+  }
+
+  .cloud-b {
+    top: 32%;
+    right: -18%;
+    background: #a343e8
+  }
+
+  .home-copy {
+    position: absolute;
+    z-index: 4;
+    left: clamp(22px, 4vw, 64px);
+    top: 17%;
+    max-width: 270px;
+    text-align: left;
+    text-shadow: 0 3px 24px #07051d;
+    pointer-events: none
+  }
+
+  .home-kicker {
+    font: 500 11px/1.5 var(--font-mono);
+    letter-spacing: .19em;
+    text-transform: uppercase;
+    color: #ffe0a1;
+    margin: 0 0 15px
+  }
+
+  .home-copy h1 {
+    font: 900 clamp(42px, 4.8vw, 66px)/.82 var(--font-display);
+    letter-spacing: .015em;
+    margin: 0;
+    color: #fff5df
+  }
+
+  .home-copy h1 em,
+  .department-head h2 em {
+    font-style: normal;
+    color: #ffcc6e;
+    text-shadow: 0 0 28px #ffb93d5c
+  }
+
+  .home-sub {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #f2e8ed;
+    max-width: 340px;
+    margin: 22px 0 25px
+  }
+
+  .home-cta {
+    pointer-events: auto;
+    border-radius: 999px;
+    padding: 0 25px;
+    min-height: 49px;
+    gap: 20px;
+    box-shadow: 0 0 30px #ffc65c32;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: 12px
+  }
+
+  .main-tent {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: 7.5%;
+    transform: translateX(-50%);
+    width: min(64vw, 890px);
+    height: auto;
+    max-height: 76%;
+    object-fit: contain;
+    object-position: center bottom;
+    filter: drop-shadow(0 22px 24px #0206178c);
+    transform-origin: 50% 100%;
+    will-change: transform, opacity
+  }
+
+  .home-ground {
+    position: absolute;
+    z-index: 1;
+    bottom: -10%;
+    left: -10%;
+    width: 120%;
+    height: 34%;
+    border-radius: 50% 50% 0 0;
+    background: radial-gradient(ellipse at 50% 0%, #e9a84b 0, #6a6b36 22%, #16333b 56%, #08132b 78%);
+    box-shadow: 0 -25px 80px #f4ac4d22
+  }
+
+  .home-ground:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(165deg, transparent 0 34px, #ffc65c12 35px 37px, transparent 38px 76px);
+    opacity: .55
+  }
+
+  .home-lights {
+    position: absolute;
+    z-index: 2;
+    bottom: 9%;
+    left: 0;
+    right: 0;
+    height: 13%;
+    background: radial-gradient(circle at 8% 60%, #ffdf8d 0 2px, transparent 5px), radial-gradient(circle at 19% 45%, #ffdf8d 0 2px, transparent 5px), radial-gradient(circle at 82% 45%, #ffdf8d 0 2px, transparent 5px), radial-gradient(circle at 92% 65%, #ffdf8d 0 2px, transparent 5px);
+    background-size: 120px 65px;
+    filter: drop-shadow(0 0 7px #ffb744)
+  }
+
+  .home-bottom {
+    position: absolute;
+    z-index: 5;
+    left: 28px;
+    right: 28px;
+    bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff0ce;
+    font: 10px/1 var(--font-mono);
+    letter-spacing: .18em;
+    text-shadow: 0 2px 12px #000
+  }
+
+  .scroll-hint {
+    display: flex;
+    align-items: center;
+    gap: 10px
+  }
+
+  .scroll-hint b {
+    font-size: 18px;
+    color: #ffc65c
+  }
+
+  .departments {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 112px max(20px, 5vw) 90px;
+    background: radial-gradient(ellipse at 50% 0%, #572263 0, #21113e 36%, #0a0b27 76%)
+  }
+
+  .departments:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at 12% 25%, #ffc65c19 0 1px, transparent 2px), radial-gradient(circle at 72% 36%, #fff9df 0 1px, transparent 2px);
+    background-size: 130px 120px, 190px 170px;
+    opacity: .7
+  }
+
+  .department-head {
+    text-align: center;
+    max-width: 740px;
+    margin: 0 auto 48px
+  }
+
+  .department-head h2 {
+    font: 900 clamp(42px, 7vw, 84px)/.9 var(--font-display);
+    margin: 0 0 18px;
+    color: #fff4df
+  }
+
+  .department-head>p:last-child {
+    color: #d8c9e7;
+    margin: 0;
+    font-size: 15px
+  }
+
+  .department-grid {
+    max-width: 1260px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 44px 24px;
+    align-items: end
+  }
+
+  .department-tent {
+    --tent-a: #c52c38;
+    --tent-b: #f8dfb0;
+    --tent-c: #1d4e9b;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    min-height: 250px;
+    padding: 0 8px 18px;
+    border: 0;
+    background: transparent;
+    color: #fff3d6;
+    cursor: pointer;
+    transition: transform .35s ease, filter .35s ease;
+    filter: drop-shadow(0 12px 18px #0005)
+  }
+
+  .department-tent:before {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    bottom: 45px;
+    width: 90%;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffbb5b30;
+    filter: blur(14px);
+    transition: opacity .3s
+  }
+
+  .tent-roof {
+    position: relative;
+    display: block;
+    width: min(100%, 220px);
+    height: 115px;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    background: repeating-conic-gradient(from 0deg at 50% 0%, var(--tent-a) 0deg 20deg, var(--tent-b) 20deg 40deg);
+    border-bottom: 4px solid #e6ad50;
+    filter: drop-shadow(0 0 12px #ffc65c30)
+  }
+
+  .tent-roof:after {
+    content: "";
+    position: absolute;
+    left: 47%;
+    top: 0;
+    width: 6%;
+    height: 100%;
+    background: var(--tent-b);
+    opacity: .8
+  }
+
+  .tent-flag {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    height: 24px;
+    width: 3px;
+    background: #f6c25d;
+    transform: translateX(-50%);
+    z-index: 1
+  }
+
+  .tent-flag:after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    width: 24px;
+    height: 13px;
+    background: #e32b36;
+    clip-path: polygon(0 0, 100% 15%, 75% 58%, 100% 100%, 0 85%)
+  }
+
+  .tent-awning {
+    width: min(100%, 220px);
+    height: 28px;
+    margin-top: -1px;
+    display: grid;
+    place-items: center;
+    background: var(--tent-c);
+    border-top: 3px solid #f4bf62;
+    border-bottom: 4px solid #e4ad50;
+    border-radius: 0 0 45% 45%;
+    font-size: 14px;
+    letter-spacing: 13px;
+    padding-left: 13px;
+    color: #fff3cf;
+    text-shadow: 0 0 6px #fff
+  }
+
+  .tent-door {
+    width: min(100%, 220px);
+    height: 45px;
+    background: linear-gradient(90deg, var(--tent-a), var(--tent-b) 25%, var(--tent-a) 45%, #06122d 46% 54%, var(--tent-a) 55%, var(--tent-b) 75%, var(--tent-a));
+    border-bottom: 4px solid #e5b458;
+    box-shadow: inset 0 -12px 18px #07051c
+  }
+
+  .department-tent strong {
+    font: 800 21px/1.05 var(--font-display);
+    margin-top: 16px;
+    text-align: center;
+    max-width: 220px
+  }
+
+  .department-tent small {
+    font: 500 9px/1 var(--font-mono);
+    letter-spacing: .16em;
+    color: #ffc65c;
+    margin-top: 9px
+  }
+
+  .department-tent:hover,
+  .department-tent:focus-visible {
+    transform: translateY(-9px) scale(1.025);
+    filter: drop-shadow(0 0 24px #ffc65c35)
+  }
+
+  .department-tent:hover:before,
+  .department-tent:focus-visible:before {
+    opacity: 1;
+    background: #ffc65c55
+  }
+
+  .department-tent[aria-pressed="true"] {
+    transform: translateY(-8px);
+    filter: drop-shadow(0 0 25px #ffc65c75)
+  }
+
+  .department-tent[aria-pressed="true"] .tent-door {
+    box-shadow: inset 0 -12px 18px #07051c, 0 0 24px #ffc65c70
+  }
+
+  .tent-blue {
+    --tent-a: #c52d38;
+    --tent-b: #fff0ce;
+    --tent-c: #174f9c
+  }
+
+  .tent-gold {
+    --tent-a: #d28b22;
+    --tent-b: #fff0c9;
+    --tent-c: #922b3e
+  }
+
+  .tent-violet {
+    --tent-a: #6e3d9d;
+    --tent-b: #f8dfb0;
+    --tent-c: #1c4d8e
+  }
+
+  .tent-pink {
+    --tent-a: #b32e64;
+    --tent-b: #ffe4c4;
+    --tent-c: #7b294d
+  }
+
+  .tent-green {
+    --tent-a: #23765b;
+    --tent-b: #fff0ce;
+    --tent-c: #264d88
+  }
+
+  .tent-cyan {
+    --tent-a: #197d94;
+    --tent-b: #fff0ce;
+    --tent-c: #243c82
+  }
+
+  .department-note {
+    max-width: 800px;
+    margin: 42px auto 0;
+    text-align: center;
+    color: #cbbddd;
+    font-size: 12px;
+    line-height: 1.6
+  }
+
+  #showcase {
+    scroll-margin-top: 0
+  }
+
+  .plan {
+    border-top: 1px solid #ffc65c1c
+  }
+
+  @media(max-width:900px) {
+    .home-copy {
+      top: 14%;
+      left: 4%;
+      max-width: 245px
+    }
+
+    .main-tent {
+      width: min(82vw, 760px);
+      bottom: 8%;
+      max-height: 68%
+    }
+
+    .department-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 34px 14px
+    }
+
+    .department-tent {
+      min-height: 225px
+    }
+
+    .tent-roof,
+    .tent-awning,
+    .tent-door {
+      width: min(100%, 190px)
+    }
+  }
+
+  @media(max-width:640px) {
+    .carnival-nav {
+      align-items: flex-start;
+      padding: 12px 12px
+    }
+
+    .carnival-nav .brand {
+      font-size: 18px
+    }
+
+    .carnival-nav .nav-links {
+      gap: 9px;
+      padding: 6px 7px
+    }
+
+    .carnival-nav .nav-links a:not(.btn) {
+      display: none
+    }
+
+    .carnival-nav .nav-links .btn {
+      min-height: 36px;
+      padding: 0 12px;
+      font-size: 11px
+    }
+
+    .carnival-home {
+      height: 92svh;
+      min-height: 650px
+    }
+
+    .moon-disc {
+      width: 95vw;
+      top: 17%;
+      left: 57%
+    }
+
+    .home-copy {
+      top: 17%;
+      left: 22px;
+      right: 22px;
+      max-width: unset
+    }
+
+    .home-copy h1 {
+      font-size: clamp(43px, 13vw, 66px)
+    }
+
+    .home-sub {
+      font-size: 13px;
+      max-width: 290px;
+      margin: 14px 0 17px
+    }
+
+    .main-tent {
+      width: 116vw;
+      max-width: none;
+      max-height: 53%;
+      bottom: 12%;
+      left: 51%
+    }
+
+    .home-ground {
+      height: 24%;
+      bottom: -7%
+    }
+
+    .home-bottom {
+      left: 14px;
+      right: 14px;
+      font-size: 8px;
+      letter-spacing: .08em
+    }
+
+    .home-bottom>span:first-child,
+    .home-bottom>span:last-child {
+      display: none
+    }
+
+    .home-bottom {
+      justify-content: center
+    }
+
+    .departments {
+      padding: 88px 15px 65px
+    }
+
+    .department-head {
+      margin-bottom: 32px
+    }
+
+    .department-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px 10px
+    }
+
+    .department-tent {
+      min-height: 195px;
+      padding-bottom: 12px
+    }
+
+    .tent-roof {
+      height: 86px;
+      width: min(100%, 155px)
+    }
+
+    .tent-awning {
+      height: 22px;
+      width: min(100%, 155px);
+      font-size: 10px;
+      letter-spacing: 8px;
+      padding-left: 8px
+    }
+
+    .tent-door {
+      height: 35px;
+      width: min(100%, 155px)
+    }
+
+    .department-tent strong {
+      font-size: 18px
+    }
+
+    .department-tent small {
+      font-size: 8px
+    }
+
+    .home-cta {
+      min-height: 44px;
+      font-size: 10px
+    }
+
+    .home-copy .home-kicker {
+      font-size: 9px
+    }
+  }
+
+  @media(prefers-reduced-motion:reduce) {
+
+    .department-tent,
+    .main-tent {
+      transition: none !important
+    }
+  }
+</style>
+
+<header class="nav carnival-nav">
+  <a class="brand" href="#carnival-home"><span class="bulb" aria-hidden="true"></span>Midway Carnival</a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="#carnival-home">Home</a><a href="#departments">Departments</a><a href="#showcase">Events</a>
+    <a class="btn primary small" href="#departments">Enter the carnival</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section id="carnival-home" class="carnival-home" aria-label="Midway Carnival welcome">
+    <div class="cosmic-cloud cloud-a" aria-hidden="true"></div>
+    <div class="cosmic-cloud cloud-b" aria-hidden="true"></div>
+    <div class="moon-disc" aria-hidden="true"></div>
+    <div class="starfield" aria-hidden="true"></div>
+    <div class="home-copy">
+      <p class="home-kicker">A universe of wonder · One unforgettable night</p>
+      <h1>STEP INTO<br><em>THE MAGIC</em></h1>
+      <p class="home-sub">Lights in the sky. Wonder around every corner. Your carnival adventure starts here.</p><a
+        class="btn primary home-cta" href="#departments">Explore the festival <span aria-hidden="true">↗</span></a>
+    </div>
+    <img class="main-tent" src="midway-main-tent.png"
+      alt="The original red-and-cream striped carnival big top with blue star bunting and gold ornamentation"
+      fetchpriority="high">
+    <div class="home-ground" aria-hidden="true"></div>
+    <div class="home-lights" aria-hidden="true"></div>
+    <div class="home-bottom"><span>WONDER AWAITS</span><span class="scroll-hint">SCROLL TO DISCOVER
+        <b>↓</b></span><span>THE MIDWAY EXPERIENCE</span></div>
+  </section>
+
+  <section id="departments" class="departments" aria-labelledby="departmentTitle">
+    <div class="department-stars" aria-hidden="true"></div>
+    <div class="department-head">
+      <p class="home-kicker">Choose your own adventure</p>
+      <h2 id="departmentTitle">PICK YOUR <em>BIG TOP</em></h2>
+      <p>Every tent opens a different corner of the carnival. Choose one to begin your ride.</p>
+    </div>
+    <div class="department-grid">
+      <button class="department-tent tent-red" data-department="Computer Science" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Computer Science</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-blue" data-department="Information Technology" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Information Technology</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-gold" data-department="Electronics" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Electronics</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-violet" data-department="Mechanical" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Mechanical</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-pink" data-department="Cultural Society" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Cultural Society</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-green" data-department="Gaming Arena" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Gaming Arena</strong><small>ENTER THE TENT ↗</small></button>
+      <button class="department-tent tent-cyan" data-department="Civil Engineering" aria-pressed="false"><span
+          class="tent-flag"></span><span class="tent-roof"></span><span class="tent-awning">✦ ✦ ✦</span><span
+          class="tent-door"></span><strong>Civil Engineering</strong><small>ENTER THE TENT ↗</small></button>
+    </div>
+    <p class="department-note" id="departmentNote" aria-live="polite">Select a department to enter the event ride.
+      Published department event data will determine the event list.</p>
+  </section>
+  <section id="showcase" class="showcase" aria-label="Event showcase">
+    <canvas id="gl" aria-hidden="true"></canvas>
+    <div class="shade" aria-hidden="true"></div>
+    <div class="hero" id="hero">
+      <p class="kicker" id="heroKicker">Fri 6 &ndash; Sun 8 November 2026 &middot; Riverside Fairgrounds</p>
+      <h1>Events</h1>
+      <p class="cue">Scroll to board the ride <span class="chev" aria-hidden="true"></span></p>
+    </div>
+    <div class="cards" id="cards"></div>
+    <nav class="hud" id="hud" aria-label="Ride stops">
+      <p class="now"><span class="now-n" id="nowN"></span><span class="now-t" id="nowT"></span></p>
+      <div class="track"><span class="fill" id="fill"></span>
+        <ol class="stops" id="stops"></ol>
+      </div>
+    </nav>
+    <p class="sr" id="live" aria-live="polite"></p>
+  </section>
+
+  <section id="plan" class="plan" aria-labelledby="planTitle">
+    <div class="plan-inner">
+      <h2 id="planTitle">Plan your night</h2>
+      <div class="plan-grid">
+        <div>
+          <h3>Gate hours</h3>
+          <dl>
+            <dt>Friday 6 Nov</dt>
+            <dd>5:00 PM &ndash; 11:30 PM</dd>
+            <dt>Saturday 7 Nov</dt>
+            <dd>12:00 PM &ndash; 12:00 AM</dd>
+            <dt>Sunday 8 Nov</dt>
+            <dd>12:00 PM &ndash; 10:30 PM</dd>
+          </dl>
+        </div>
+        <div>
+          <h3>Getting there</h3>
+          <ul>
+            <li>Free shuttle from Riverside Metro every 10 minutes after 4:00 PM.</li>
+            <li>Bike valet at Gate B. Rideshare drop-off at Gate A.</li>
+            <li>Step-free entry and viewing platforms at every stage.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Tickets</h3>
+          <dl>
+            <dt>Day pass</dt>
+            <dd>&#8377;499</dd>
+            <dt>Ride band</dt>
+            <dd>&#8377;1,299</dd>
+            <dt>Family of four</dt>
+            <dd>&#8377;1,599</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="foot"><span>&copy; 2026 Events</span><span>Riverside Fairgrounds</span></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="sheet" class="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet-card">
+    <img id="sheetImg" alt="">
+    <div class="sheet-body">
+      <p class="chip" id="sheetCat"></p>
+      <h2 id="sheetTitle"></h2>
+      <dl class="meta" id="sheetMeta"></dl>
+      <p id="sheetText"></p>
+      <div class="actions">
+        <a class="btn primary" id="sheetReg" href="#" data-register>Register</a>
+        <button class="btn ghost" id="sheetClose" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+  (() => {
+    'use strict';
+
+    /* =====================================================================
+       Events: scroll-driven carnival coaster showcase
+       Sections: 1 data + UI  |  2 3D carnival scene  |  3 Ferris wheel + controller
+       ===================================================================== */
+
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smooth = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+    const pad2 = n => String(n).padStart(2, '0');
+    const $ = (s, r = document) => r.querySelector(s);
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    /* ---------------------------------------------------------------------
+       CONFIG + EVENTS
+       Replace EVENTS with your real data source (same fields). If your app has its own
+       details view or router, set onOpenEvent / onRegister and they replace the built-in sheet and demo toast.
+       --------------------------------------------------------------------- */
+    const CONFIG = {
+      onOpenEvent: null,   // (event) => void
+      onRegister: null     // (event) => void
+    };
+
+    const EVENTS = [
+      {
+        id: 'neon-drop', title: 'Neon Drop', category: 'Live music', date: 'Fri 6 Nov', time: '7:30 PM', venue: 'Main Midway Stage', price: '₹799',
+        blurb: 'Opening night headliners play under the full length of the midway lights, with a laser finale timed to the Ferris wheel.',
+        details: 'Three acts take the main stage, with doors at 6:45 PM. The laser finale starts at 10:40 PM. Standing room only on the lawn; a limited number of seats are held for ride-band holders.',
+        registerUrl: '#/register/neon-drop'
+      },
+      {
+        id: 'lantern-market', title: 'Lantern Market', category: 'Food and craft', date: 'Sat 7 Nov', time: '4:00 PM', venue: 'Lantern Row', price: 'Free entry',
+        blurb: 'Forty local kitchens and makers run stalls along a lantern-lit lane. Tasting tokens are sold at the gate.',
+        details: 'Stalls open at 4:00 PM and run until the gates close. Tokens are ₹50 each and work at every stall. Vegetarian, vegan and Jain options are marked at each counter.',
+        registerUrl: '#/register/lantern-market'
+      },
+      {
+        id: 'gravity-games', title: 'Gravity Games', category: 'Tournaments', date: 'Sat 7 Nov', time: '11:00 AM', venue: 'Arena Tent B', price: '₹299',
+        blurb: 'Team challenges, ring toss leagues and a timed obstacle run. Register a team of four before brackets fill.',
+        details: 'Brackets are seeded by registration order. Each team plays three rounds, and the top four go to the evening final. Closed shoes are required for the obstacle run.',
+        registerUrl: '#/register/gravity-games'
+      },
+      {
+        id: 'midnight-illusions', title: 'Midnight Illusions', category: 'Stage show', date: 'Sat 7 Nov', time: '10:30 PM', venue: 'The Big Top', price: '₹599',
+        blurb: 'Close-up and stage magic in the big top, two sets nightly. Seating is general admission.',
+        details: 'Two sets, 10:30 PM and 11:45 PM, about 40 minutes each. Front rows are close-up work, so phones stay away while the show runs. Suitable for ages 8 and up.',
+        registerUrl: '#/register/midnight-illusions'
+      },
+      {
+        id: 'silent-disco', title: 'Silent Disco', category: 'Dance', date: 'Sun 8 Nov', time: '8:00 PM', venue: 'Wheel Plaza', price: '₹399',
+        blurb: 'Three DJ channels, one dance floor. Headphones are included with every ticket.',
+        details: 'Pick a channel from the dial on your headphones and switch whenever you like. The plaza sits right under the Ferris wheel. Headphones are returned at the exit.',
+        registerUrl: '#/register/silent-disco'
+      },
+      {
+        id: 'skyburst-finale', title: 'Skyburst Finale', category: 'Fireworks', date: 'Sun 8 Nov', time: '9:45 PM', venue: 'Riverside Lawn', price: '₹349',
+        blurb: 'A ten-minute drone and fireworks show set to a live orchestra. Lawn gates close at 9:15 PM.',
+        details: 'Bring a blanket; chairs are not allowed on the lawn. The orchestra starts a short pre-show at 9:30 PM. Shuttles run until midnight.',
+        registerUrl: '#/register/skyburst-finale'
+      }
+    ];
+
+    /* Generated poster art, used when an event has no image of its own */
+    function poster(i) {
+      const PAL = [['#8e44ff', '#ff3aa8', '#3ae3ff'], ['#ffc65c', '#ff3aa8', '#8e44ff'], ['#3ae3ff', '#8e44ff', '#ffc65c'],
+      ['#ff3aa8', '#8e44ff', '#ffc65c'], ['#3ae3ff', '#ff3aa8', '#8e44ff'], ['#ffc65c', '#3ae3ff', '#ff3aa8']];
+      const [a, b, c] = PAL[i % 6];
+      const r = mulberry32(i * 977 + 13);
+      let g = '';
+      switch (i % 6) {
+        case 0:
+          for (let k = 1; k < 9; k++) g += `<circle cx="560" cy="210" r="${k * 38}" fill="none" stroke="${k % 2 ? c : '#fff'}" stroke-opacity="${(0.55 - k * 0.05).toFixed(2)}" stroke-width="3"/>`;
+          g += `<circle cx="560" cy="210" r="46" fill="${b}"/>`;
+          break;
+        case 1:
+          for (let k = 0; k < 11; k++) {
+            const x = 40 + k * 72 + (r() * 20 - 10), y = 60 + r() * 190;
+            g += `<line x1="${x}" y1="0" x2="${x}" y2="${y}" stroke="#fff" stroke-opacity=".35"/><ellipse cx="${x}" cy="${y + 26}" rx="22" ry="30" fill="${k % 2 ? a : b}"/><rect x="${x - 9}" y="${y - 4}" width="18" height="8" fill="${c}"/>`;
+          }
+          break;
+        case 2:
+          for (let k = 0; k < 36; k++) {
+            const t = Math.PI * (k / 35);
+            g += `<line x1="400" y1="440" x2="${400 + Math.cos(t) * 620}" y2="${440 - Math.sin(t) * 620}" stroke="${k % 3 ? '#fff' : c}" stroke-opacity="${k % 3 ? 0.18 : 0.6}" stroke-width="${k % 3 ? 2 : 5}"/>`;
+          }
+          g += `<polygon points="400,120 470,230 400,340 330,230" fill="${b}"/>`;
+          break;
+        case 3:
+          g += `<circle cx="560" cy="170" r="92" fill="${c}"/><circle cx="600" cy="150" r="86" fill="#0b0d2a"/>`;
+          for (let k = 0; k < 26; k++) g += `<circle cx="${(r() * 800).toFixed(0)}" cy="${(r() * 400).toFixed(0)}" r="${(2 + r() * 4).toFixed(1)}" fill="#fff" fill-opacity="${(0.4 + r() * 0.5).toFixed(2)}"/>`;
+          break;
+        case 4:
+          for (let k = 0; k < 7; k++) {
+            const y = 110 + k * 38;
+            g += `<path d="M0 ${y} Q 100 ${y - 46} 200 ${y} T 400 ${y} T 600 ${y} T 800 ${y}" fill="none" stroke="${[a, b, c][k % 3]}" stroke-width="7" stroke-opacity="${(0.9 - k * 0.08).toFixed(2)}"/>`;
+          }
+          break;
+        default:
+          for (let k = 0; k < 3; k++) {
+            const cx = 170 + k * 230 + (r() * 40 - 20), cy = 130 + r() * 110;
+            for (let j = 0; j < 22; j++) {
+              const t = j / 22 * Math.PI * 2, l = 46 + r() * 50;
+              g += `<line x1="${(cx + Math.cos(t) * 14).toFixed(1)}" y1="${(cy + Math.sin(t) * 14).toFixed(1)}" x2="${(cx + Math.cos(t) * l).toFixed(1)}" y2="${(cy + Math.sin(t) * l).toFixed(1)}" stroke="${[a, b, c][(j + k) % 3]}" stroke-width="4" stroke-linecap="round"/>`;
+            }
+          }
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0d2a"/><stop offset="1" stop-color="${a}" stop-opacity=".55"/></linearGradient></defs><rect width="800" height="420" fill="url(#g)"/>${g}</svg>`;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    /* ---------------------------------------------------------------------
+       DOM: cards, HUD, sheet, toast (built once; nothing re-renders during scroll)
+       --------------------------------------------------------------------- */
+    const N_EV = EVENTS.length;
+    const showcase = $('#showcase');
+    const cardsEl = $('#cards');
+    const stopsEl = $('#stops');
+    const nowN = $('#nowN'), nowT = $('#nowT'), fillEl = $('#fill'), liveEl = $('#live'), heroEl = $('#hero');
+
+    EVENTS.forEach((ev, i) => {
+      const art = document.createElement('article');
+      art.className = 'card';
+      art.dataset.i = i;
+      art.setAttribute('aria-label', ev.title);
+      art.inert = true;
+      art.innerHTML =
+        `<div class="card-body">
+       <div class="marquee" aria-hidden="true"></div>
+       <div class="poster">
+         <img src="${esc(ev.image || poster(i))}" alt="" loading="eager" decoding="async">
+         <span class="tag cat">${esc(ev.category)}</span>
+         <span class="tag stop">Stop ${pad2(i + 1)}</span>
+       </div>
+       <div class="perf" aria-hidden="true"></div>
+       <div class="info">
+         <h2>${esc(ev.title)}</h2>
+         <dl class="meta">
+           <div><dt>Date</dt><dd>${esc(ev.date)}</dd></div>
+           <div><dt>Time</dt><dd>${esc(ev.time)}</dd></div>
+           <div><dt>Venue</dt><dd>${esc(ev.venue)}</dd></div>
+           <div><dt>Entry</dt><dd>${esc(ev.price)}</dd></div>
+         </dl>
+         <p>${esc(ev.blurb)}</p>
+       </div>
+       <div class="actions">
+         <a class="btn primary" href="${esc(ev.registerUrl)}" data-register data-i="${i}">Register</a>
+         <button class="btn ghost" type="button" data-details="${i}">Details</button>
+       </div>
+       <div class="marquee bottom" aria-hidden="true"></div>
+     </div>`;
+      cardsEl.appendChild(art);
+
+      const li = document.createElement('li');
+      li.innerHTML = `<button class="dot" type="button" data-stop="${i}" aria-label="Go to stop ${i + 1}: ${esc(ev.title)}"></button>`;
+      stopsEl.appendChild(li);
+    });
+    const cardEls = [...cardsEl.querySelectorAll('.card')];
+    const dotEls = [...stopsEl.querySelectorAll('.dot')];
+
+    const sheet = $('#sheet');
+    const toastEl = $('#toast');
+    let toastTimer = 0;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3800);
+    }
+
+    function openEvent(i) {
+      const ev = EVENTS[i];
+      if (CONFIG.onOpenEvent) { CONFIG.onOpenEvent(ev); return; }
+      $('#sheetImg').src = ev.image || poster(i);
+      $('#sheetCat').textContent = ev.category;
+      $('#sheetTitle').textContent = ev.title;
+      $('#sheetMeta').innerHTML = [['Date', ev.date], ['Time', ev.time], ['Venue', ev.venue], ['Entry', ev.price]]
+        .map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('');
+      $('#sheetText').textContent = ev.details || ev.blurb;
+      const reg = $('#sheetReg');
+      reg.href = ev.registerUrl;
+      reg.dataset.i = i;
+      if (typeof sheet.showModal === 'function') sheet.showModal(); else sheet.setAttribute('open', '');
+    }
+
+    function onRegister(e) {
+      const a = e.target.closest('[data-register]');
+      if (!a) return;
+      const ev = EVENTS[+a.dataset.i];
+      if (CONFIG.onRegister) { e.preventDefault(); CONFIG.onRegister(ev); return; }
+      if ((a.getAttribute('href') || '').startsWith('#')) {
+        e.preventDefault();
+        toast(`Sample link for ${ev.title}. In your app this opens ${ev.registerUrl}`);
+      }
+    }
+
+    const listeners = [];
+    function on(target, type, fn, opts) { target.addEventListener(type, fn, opts); listeners.push(() => target.removeEventListener(type, fn, opts)); }
+
+    on(cardsEl, 'click', e => {
+      const d = e.target.closest('[data-details]');
+      if (d) { openEvent(+d.dataset.details); return; }
+      onRegister(e);
+    });
+    on(sheet, 'click', e => {
+      if (e.target === sheet) sheet.close();
+      else onRegister(e);
+    });
+    on($('#sheetClose'), 'click', () => sheet.close());
+
+    let jumpTo = () => { };
+    on(stopsEl, 'click', e => {
+      const b = e.target.closest('[data-stop]');
+      if (b) jumpTo(+b.dataset.stop);
+    });
+
+    /* HUD + interactivity only change when the nearest stop changes, never per frame */
+    let nearest = -1, liveIdx = -1;
+    function setNearest(i) {
+      if (i === nearest) return;
+      nearest = i;
+      nowN.textContent = `Stop ${pad2(i + 1)} / ${pad2(N_EV)}`;
+      nowT.textContent = EVENTS[i].title;
+      dotEls.forEach((d, k) => { d.classList.toggle('on', k === i); d.classList.toggle('seen', k < i); });
+    }
+    function setLive(i) {
+      if (i === liveIdx) return;
+      liveIdx = i;
+      cardEls.forEach((c, k) => {
+        const on_ = k === i;
+        c.classList.toggle('is-live', on_);
+        c.inert = !on_;
+      });
+      if (i >= 0) liveEl.textContent = `Stop ${i + 1} of ${N_EV}: ${EVENTS[i].title}`;
+    }
+
+    /* =====================================================================
+       2. THREE.JS CARNIVAL: track, supports, station, attractions, lights, rider camera
+       ===================================================================== */
+    const TIER = (() => {
+      const small = Math.min(innerWidth, innerHeight) < 700 || matchMedia('(pointer:coarse)').matches;
+      const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+      const low = small || weak;
+      return {
+        low, samples: low ? 520 : 900, radial: low ? 4 : 6, dpr: Math.min(window.devicePixelRatio || 1, low ? 1.5 : 2),
+        stars: low ? 240 : 600, props: low ? 0.55 : 1, dust: low ? 280 : 760
+      };
+    })();
+
+    let UPV, _m4, _q, _s, _p, _d;
+    function initThreeHelpers() {
+      UPV = new THREE.Vector3(0, 1, 0);
+      _m4 = new THREE.Matrix4(); _q = new THREE.Quaternion(); _s = new THREE.Vector3(); _p = new THREE.Vector3(); _d = new THREE.Vector3();
+    }
+
+    function glowTexture() {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    class Bulbs {
+      constructor() { this.p = []; this.c = []; }
+      add(v, col, k = 1) { this.p.push(v.x, v.y, v.z); this.c.push(col.r * k, col.g * k, col.b * k); }
+      build(tex, size, opacity = 1) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
+        g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
+        const m = new THREE.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+        const pts = new THREE.Points(g, m); pts.frustumCulled = false; return pts;
+      }
+    }
+
+    /* A cylinder between two points, for instanced steel members */
+    function memberMatrix(a, b, r) {
+      _d.subVectors(b, a);
+      const len = _d.length() || 1e-4;
+      _p.addVectors(a, b).multiplyScalar(0.5);
+      _q.setFromUnitVectors(UPV, _d.divideScalar(len));
+      _s.set(r, len, r);
+      return _m4.compose(_p, _q, _s);
+    }
+    function membersMesh(list, mat, seg = 5) {
+      const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, seg, 1, false), mat, list.length);
+      list.forEach((m, k) => mesh.setMatrixAt(k, memberMatrix(m[0], m[1], m[2])));
+      mesh.instanceMatrix.needsUpdate = true; mesh.frustumCulled = false;
+      return mesh;
+    }
+
+    function stripeTexture(c1, c2, n = 14) {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 8;
+      const g = c.getContext('2d'), w = 256 / n;
+      for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? c2 : c1; g.fillRect(i * w, 0, w + 1, 8); }
+      const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return t;
+    }
+
+    function disposeScene(scene) {
+      scene.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+        mats.forEach(m => { ['map', 'emissiveMap', 'alphaMap'].forEach(k => m[k] && m[k].dispose()); m.dispose(); });
+      });
+    }
+
+    function buildCarnival() {
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0x1b0f40, 30, 520);
+      const glow = glowTexture();
+      const rng = mulberry32(2026);
+      const bulbs = new Bulbs();      // small lights: track, strings, tents
+      const beacons = new Bulbs();    // large lights: pole tops, tower tips
+      const members = [];             // steel tubes between two points: [a, b, radius]
+      const V = (x, y, z) => new THREE.Vector3(x, y, z);
+      const C = { gold: new THREE.Color(0xffc65c), cyan: new THREE.Color(0x3ae3ff), mag: new THREE.Color(0xff3aa8), vio: new THREE.Color(0x9a5cff), warm: new THREE.Color(0xffe2a8) };
+      const cycle = [C.gold, C.mag, C.cyan, C.gold, C.vio];
+
+      /* ---- sky, stars (follow the camera so they never parallax) ---- */
+      const skyGroup = new THREE.Group(); scene.add(skyGroup);
+      const sc = document.createElement('canvas'); sc.width = 8; sc.height = 512;
+      const sg = sc.getContext('2d'), grd = sg.createLinearGradient(0, 0, 0, 512);
+      [[0, '#03041a'], [0.32, '#0a0a30'], [0.46, '#2a1262'], [0.495, '#4a1a78'], [0.505, '#1b0f40'], [1, '#0a0620']].forEach(s => grd.addColorStop(s[0], s[1]));
+      sg.fillStyle = grd; sg.fillRect(0, 0, 8, 512);
+      const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 24, 16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), side: THREE.BackSide, fog: false, depthWrite: false }));
+      sky.renderOrder = -10; skyGroup.add(sky);
+      const sp = [], sCol = [];
+      for (let i = 0; i < TIER.stars; i++) {
+        let x, y, z;
+        do { x = rng() * 2 - 1; y = rng(); z = rng() * 2 - 1; } while (x * x + y * y + z * z > 1 || y < 0.06);
+        const k = 1200 / Math.hypot(x, y, z), b = 0.45 + rng() * 0.55;
+        sp.push(x * k, y * k, z * k); sCol.push(b, b, b * (0.85 + rng() * 0.15));
+      }
+      const sgeo = new THREE.BufferGeometry();
+      sgeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); sgeo.setAttribute('color', new THREE.Float32BufferAttribute(sCol, 3));
+      const stars = new THREE.Points(sgeo, new THREE.PointsMaterial({ size: 2.6, map: glow, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: false, fog: false }));
+      stars.frustumCulled = false; skyGroup.add(stars);
+
+      /* ---- lights ---- */
+      scene.add(new THREE.HemisphereLight(0x6a57d9, 0x0d0a26, 0.8));
+      const moon = new THREE.DirectionalLight(0x7fb4ff, 0.55); moon.position.set(-80, 120, 40); scene.add(moon);
+
+      /* ---- track path: stations, lift hill, drop, banked turns, brake run ---- */
+      const CTRL = [[0, 4, 12], [0, 4, -20], [0, 9, -52], [0, 20, -86], [5, 24, -112], [19, 22, -132], [35, 8, -152], [49, 5, -178], [46, 12, -208],
+      [29, 18, -228], [5, 9, -243], [-19, 4, -258], [-39, 7, -288], [-35, 15, -318], [-12, 10, -338], [14, 5, -348], [31, 4, -372], [31, 4, -402]].map(a => V(a[0], a[1], a[2]));
+      const curve = new THREE.CatmullRomCurve3(CTRL, false, 'centripetal');
+      const N = TIER.samples;
+      const pts = curve.getSpacedPoints(N - 1);
+      const ds = curve.getLength() / (N - 1);
+      const T = [], R = [], U = [];
+      for (let i = 0; i < N; i++) T.push(pts[Math.min(N - 1, i + 1)].clone().sub(pts[Math.max(0, i - 1)]).normalize());
+      let bank = new Float32Array(N);
+      for (let i = 1; i < N - 1; i++) bank[i] = clamp(new THREE.Vector3().crossVectors(T[i - 1], T[i + 1]).y / (2 * ds) * 18, -0.65, 0.65);
+      const brad = Math.max(2, Math.round(7 / ds));
+      for (let pass = 0; pass < 3; pass++) {
+        const nb = new Float32Array(N);
+        for (let i = 0; i < N; i++) { let s = 0, c = 0; for (let j = Math.max(0, i - brad); j <= Math.min(N - 1, i + brad); j++) { s += bank[j]; c++; } nb[i] = s / c; }
+        bank = nb;
+      }
+      for (let i = 0; i < N; i++) {
+        const r0 = new THREE.Vector3().crossVectors(T[i], UPV).normalize();
+        const u0 = new THREE.Vector3().crossVectors(r0, T[i]).normalize();
+        const ub = u0.addScaledVector(r0, -bank[i]).normalize();   // tilt toward the inside of the turn
+        const rb = new THREE.Vector3().crossVectors(T[i], ub).normalize();
+        R.push(rb); U.push(new THREE.Vector3().crossVectors(rb, T[i]).normalize());
+      }
+
+      /* ---- rails, spine, ties ---- */
+      const GAUGE = 1.3;
+      const railMat = new THREE.MeshStandardMaterial({ color: 0xdfe3ff, metalness: 0.6, roughness: 0.35, emissive: 0x20357a, emissiveIntensity: 0.6 });
+      const spineMat = new THREE.MeshStandardMaterial({ color: 0x23265e, metalness: 0.5, roughness: 0.5, emissive: 0x3b1a8a, emissiveIntensity: 0.55 });
+      const tieMat = new THREE.MeshStandardMaterial({ color: 0x2a2d6a, metalness: 0.3, roughness: 0.6, emissive: 0x1b1550, emissiveIntensity: 0.7 });
+      const supMat = new THREE.MeshStandardMaterial({ color: 0x3a3f93, metalness: 0.35, roughness: 0.55, emissive: 0x17135a, emissiveIntensity: 0.6 });
+      const tube = (off, radius, mat) => {
+        const arr = pts.map((p, i) => off(p, i));
+        return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arr, false, 'catmullrom', 0.5), N - 1, radius, TIER.radial, false), mat);
+      };
+      scene.add(tube((p, i) => p.clone().addScaledVector(R[i], GAUGE / 2), 0.07, railMat));
+      scene.add(tube((p, i) => p.clone().addScaledVector(R[i], -GAUGE / 2), 0.07, railMat));
+      scene.add(tube((p, i) => p.clone().addScaledVector(U[i], -0.5), 0.17, spineMat));
+
+      const tieStep = Math.max(2, Math.round(1.5 / ds));
+      const tieIdx = []; for (let i = 0; i < N; i += tieStep) tieIdx.push(i);
+      const ties = new THREE.InstancedMesh(new THREE.BoxGeometry(GAUGE + 0.55, 0.08, 0.2), tieMat, tieIdx.length);
+      const zA = new THREE.Vector3();
+      tieIdx.forEach((i, k) => {
+        zA.crossVectors(R[i], U[i]); _m4.makeBasis(R[i], U[i], zA); _m4.setPosition(pts[i]); ties.setMatrixAt(k, _m4);
+        if (k % (TIER.low ? 3 : 2) === 0) {
+          const col = k % 10 === 0 ? C.cyan : C.gold;
+          [-1, 1].forEach(s => bulbs.add(pts[i].clone().addScaledVector(R[i], s * (GAUGE / 2 + 0.34)).addScaledVector(U[i], 0.14), col, 0.9));
+        }
+      });
+      ties.instanceMatrix.needsUpdate = true; ties.frustumCulled = false; scene.add(ties);
+
+      /* truss under the track */
+      const trussStep = Math.max(2, Math.round(2.2 / ds));
+      for (let i = 0; i < N; i += trussStep) {
+        const sp0 = pts[i].clone().addScaledVector(U[i], -0.5);
+        members.push([sp0, pts[i].clone().addScaledVector(R[i], 0.62), 0.045], [sp0, pts[i].clone().addScaledVector(R[i], -0.62), 0.045]);
+      }
+      /* support towers: two columns, cross beams and X bracing, down to the ground */
+      const supStep = Math.max(4, Math.round(11 / ds));
+      for (let i = Math.round(3 / ds); i < N; i += supStep) {
+        const sp0 = pts[i].clone().addScaledVector(U[i], -0.5);
+        const top = sp0.y - 0.2;
+        if (top < 1.5) continue;
+        const hl = Math.hypot(R[i].x, R[i].z) || 1, rx = R[i].x / hl * 1.15, rz = R[i].z / hl * 1.15;
+        const lx = sp0.x - rx, lz = sp0.z - rz, rrx = sp0.x + rx, rrz = sp0.z + rz;
+        members.push([V(lx, top, lz), V(lx, 0, lz), 0.17], [V(rrx, top, rrz), V(rrx, 0, rrz), 0.17], [V(lx, top, lz), V(rrx, top, rrz), 0.12], [sp0, V(sp0.x, top, sp0.z), 0.1],
+          [V(lx, 0, lz), V(lx, 0.35, lz), 0.4], [V(rrx, 0, rrz), V(rrx, 0.35, rrz), 0.4]);
+        const ys = [top]; for (let y = top - 4.5; y > 0.9; y -= 4.5) ys.push(y); ys.push(0.35);
+        for (let k = 0; k < ys.length - 1; k++) {
+          const y0 = ys[k], y1 = ys[k + 1];
+          members.push([V(lx, y0, lz), V(rrx, y1, rrz), 0.06], [V(rrx, y0, rrz), V(lx, y1, lz), 0.06]);
+          if (y1 > 0.5) members.push([V(lx, y1, lz), V(rrx, y1, rrz), 0.09]);
+        }
+      }
+
+      /* ---- station at the start of the ride ---- */
+      const stMat = new THREE.MeshStandardMaterial({ color: 0x1d1f58, metalness: 0.4, roughness: 0.6, emissive: 0x140f3d, emissiveIntensity: 0.8 });
+      const addBox = (w, h, l, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), mat); m.position.set(x, y, z); scene.add(m); return m; };
+      [-1, 1].forEach(s => {
+        addBox(3.2, 0.5, 38, s * 3.6, 3.25, -6, stMat);
+        [12, -6, -24].forEach(z => members.push([V(s * 3.6, 3, z), V(s * 3.6, 0, z), 0.2]));
+        [11, -1, -13, -24].forEach(z => members.push([V(s * 6.6, 9.4, z), V(s * 6.6, 0, z), 0.16]));
+        for (let z = 12; z > -24; z -= 2.2) bulbs.add(V(s * 5.4, 9.1, z), z % 4.4 < 2.2 ? C.gold : C.warm, 1);
+      });
+      addBox(14, 0.35, 38, 0, 9.6, -6, stMat);
+      addBox(14.4, 0.16, 38.4, 0, 9.3, -6, new THREE.MeshBasicMaterial({ color: 0x8e44ff }));
+
+      /* ---- ground + midway path ---- */
+      const ground = new THREE.Mesh(new THREE.CircleGeometry(900, 48), new THREE.MeshStandardMaterial({ color: 0x0c0a26, roughness: 0.95, metalness: 0 }));
+      ground.rotation.x = -Math.PI / 2; scene.add(ground);
+      {
+        const pos = [], idx = []; let k = 0;
+        for (let i = 0; i < N; i += 3) {
+          const hl = Math.hypot(R[i].x, R[i].z) || 1, hx = R[i].x / hl * 7, hz = R[i].z / hl * 7;
+          pos.push(pts[i].x - hx, 0.04, pts[i].z - hz, pts[i].x + hx, 0.04, pts[i].z + hz);
+          if (k > 0) { const a = (k - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+          k++;
+        }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x13103a, roughness: 0.9, emissive: 0x0a0826, emissiveIntensity: 0.8, side: THREE.DoubleSide })));
+      }
+
+      /* ---- scatter helpers for attractions ---- */
+      const occ = [];
+      const clear = (x, z, minD) => { for (let j = 0; j < N; j += 3) { const dx = pts[j].x - x, dz = pts[j].z - z; if (dx * dx + dz * dz < minD * minD) return false; } return true; };
+      const spaced = (x, z, r) => occ.every(o => Math.hypot(o[0] - x, o[1] - z) > o[2] + r + 3);
+      function scatter(count, minOff, maxOff, minD, rad, make) {
+        let placed = 0, tries = 0;
+        while (placed < count && tries < count * 60) {
+          tries++;
+          const i = Math.floor(rng() * N), side = rng() < 0.5 ? -1 : 1, off = minOff + rng() * (maxOff - minOff);
+          const hl = Math.hypot(R[i].x, R[i].z) || 1;
+          const x = pts[i].x + R[i].x / hl * side * off, z = pts[i].z + R[i].z / hl * side * off;
+          if (!clear(x, z, minD) || !spaced(x, z, rad)) continue;
+          occ.push([x, z, rad]); make(x, z); placed++;
+        }
+      }
+      const stripes = [stripeTexture('#8e44ff', '#2a1670'), stripeTexture('#ff3aa8', '#4a0f3a'), stripeTexture('#3ae3ff', '#0b3a52')];
+      const stripeMat = k => new THREE.MeshStandardMaterial({ map: stripes[k % 3], emissiveMap: stripes[k % 3], emissive: 0xffffff, emissiveIntensity: 0.42, roughness: 0.8, side: THREE.DoubleSide });
+      const ring = (cx, y, cz, r, n, col, k = 1) => { for (let a = 0; a < n; a++) { const t = a / n * Math.PI * 2; bulbs.add(V(cx + Math.cos(t) * r, y, cz + Math.sin(t) * r), col(a), k); } };
+
+      const tent = (x, z) => {
+        const rad = 4 + rng() * 2.2, h = 5.5 + rng() * 2.5, mat = stripeMat(Math.floor(rng() * 3));
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, h * 0.38, 20, 1, true), mat); body.position.set(x, h * 0.19, z);
+        const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.15, rad * 1.1, h * 0.62, 20, 1, true), mat); roof.position.set(x, h * 0.38 + h * 0.31, z);
+        scene.add(body, roof);
+        ring(x, h * 0.38, z, rad * 1.08, 22, a => cycle[a % 5]);
+        beacons.add(V(x, h + 0.4, z), C.mag, 0.9);
+      };
+      const carousel = (x, z) => {
+        const mat = stripeMat(Math.floor(rng() * 3));
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.4, 0.5, 24), stMat); base.position.set(x, 0.25, z);
+        const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 6.2, 3, 24, 1, true), mat); roof.position.set(x, 6.6, z);
+        scene.add(base, roof);
+        members.push([V(x, 0.4, z), V(x, 5.2, z), 0.35]);
+        for (let a = 0; a < 8; a++) { const t = a / 8 * Math.PI * 2; members.push([V(x + Math.cos(t) * 4.6, 0.4, z + Math.sin(t) * 4.6), V(x + Math.cos(t) * 4.6, 5.2, z + Math.sin(t) * 4.6), 0.1]); }
+        ring(x, 5.1, z, 6.1, 26, a => (a % 2 ? C.gold : C.warm));
+        ring(x, 3.4, z, 4.6, 12, () => C.mag, 0.8);
+        beacons.add(V(x, 8.4, z), C.gold, 1);
+      };
+      const tower = (x, z) => {
+        members.push([V(x, 0, z), V(x, 40, z), 0.6]);
+        const car = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.7, 18), new THREE.MeshStandardMaterial({ color: 0x2a2f6e, emissive: 0x1fc6e8, emissiveIntensity: 0.4 }));
+        car.position.set(x, 33, z); scene.add(car);
+        ring(x, 33.5, z, 3.2, 18, () => C.cyan);
+        for (let y = 2; y < 40; y += 1.8) { bulbs.add(V(x + 0.9, y, z), y % 3.6 < 1.8 ? C.cyan : C.vio, 1); bulbs.add(V(x - 0.9, y, z), y % 3.6 < 1.8 ? C.vio : C.cyan, 1); }
+        beacons.add(V(x, 41.5, z), C.gold, 1);
+      };
+      const awnCols = [0x8e44ff, 0xff3aa8, 0x3ae3ff, 0xffc65c];
+      const booths = (x, z) => {
+        const ang = rng() * Math.PI * 2, cnt = 5;
+        for (let k = 0; k < cnt; k++) {
+          const g = new THREE.Group();
+          g.position.set(x + Math.cos(ang) * k * 4.4, 0, z + Math.sin(ang) * k * 4.4); g.rotation.y = -ang;
+          const b = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.4, 2.4), stMat); b.position.y = 1.2;
+          const a = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.2, 1.6), new THREE.MeshStandardMaterial({ color: awnCols[(k + Math.floor(rng() * 4)) % 4], emissive: awnCols[k % 4], emissiveIntensity: 0.55 }));
+          a.position.set(0, 2.6, 1.1); a.rotation.x = 0.25; g.add(b, a);
+          scene.add(g); g.updateMatrixWorld(true);
+          for (let q = -2; q <= 2; q++) bulbs.add(g.localToWorld(V(q * 0.7, 2.25, 1.85)), cycle[(q + k + 5) % 5], 1);
+          beacons.add(g.localToWorld(V(0, 1.8, 1.4)), C.warm, 0.5);
+        }
+      };
+      const P = TIER.props;
+      scatter(Math.round(10 * P), 18, 62, 14, 6.5, tent);
+      scatter(Math.max(1, Math.round(2 * P)), 24, 60, 14, 7, carousel);
+      scatter(Math.max(1, Math.round(3 * P)), 30, 70, 14, 3, tower);
+      scatter(Math.round(4 * P), 16, 55, 14, 11, booths);
+
+      /* ---- light poles, string lights, light pools on the ground ---- */
+      const poolList = [], segs = [];
+      const poleIdx = []; for (let i = Math.round(8 / ds); i < N - 4; i += Math.round(28 / ds)) poleIdx.push(i);
+      [-1, 1].forEach(side => {
+        let prev = null;
+        poleIdx.forEach(i => {
+          const hl = Math.hypot(R[i].x, R[i].z) || 1;
+          const x = pts[i].x + R[i].x / hl * side * 9, z = pts[i].z + R[i].z / hl * side * 9;
+          members.push([V(x, 0, z), V(x, 7.2, z), 0.1]);
+          beacons.add(V(x, 7.4, z), C.warm, 0.9);
+          poolList.push([x, z]);
+          const top = V(x, 7.2, z);
+          if (prev) {
+            const dist = prev.distanceTo(top), cnt = Math.max(6, Math.round(dist / 1.5));
+            let last = null;
+            for (let k = 0; k <= cnt; k++) {
+              const t = k / cnt, v = prev.clone().lerp(top, t); v.y -= 1.4 * 4 * t * (1 - t);
+              if (k % 1 === 0) bulbs.add(v, cycle[(k + i) % 5], 0.85);
+              if (last) segs.push(last.x, last.y, last.z, v.x, v.y, v.z);
+              last = v;
+            }
+          }
+          prev = top;
+        });
+      });
+      if (segs.length) {
+        const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+        scene.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x4a4390 })));
+      }
+      if (poolList.length) {
+        const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 }), poolList.length);
+        const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2), one = new THREE.Vector3(18, 18, 1);
+        poolList.forEach((p, k) => { pool.setMatrixAt(k, _m4.compose(V(p[0], 0.08, p[1]), qx, one)); pool.setColorAt(k, C.warm); });
+        pool.instanceMatrix.needsUpdate = true; pool.frustumCulled = false; scene.add(pool);
+      }
+
+      /* ---- dust motes + distant skyline ---- */
+      const dust = new Bulbs();
+      for (let k = 0; k < TIER.dust; k++) {
+        const i = Math.floor(rng() * N);
+        dust.add(V(pts[i].x + (rng() - 0.5) * 90, 1 + rng() * 38, pts[i].z + (rng() - 0.5) * 90), cycle[k % 5], 0.35 + rng() * 0.35);
+      }
+      scene.add(dust.build(glow, 0.55, 0.7));
+      const skyMat = new THREE.MeshBasicMaterial({ color: 0x120a30 });
+      for (let k = 0; k < 64; k++) {
+        const a = rng() * Math.PI * 2, rr = 300 + rng() * 110, h = 10 + rng() * 44;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(10 + rng() * 20, h, 10 + rng() * 20), skyMat);
+        b.position.set(Math.cos(a) * rr, h / 2, -190 + Math.sin(a) * rr); scene.add(b);
+        if (rng() < 0.4) beacons.add(V(b.position.x, h + 0.5, b.position.z), C.mag, 0.7);
+      }
+
+      scene.add(membersMesh(members, supMat));
+      scene.add(bulbs.build(glow, 0.62));
+      scene.add(beacons.build(glow, 2.0, 0.9));
+
+      /* ---- rider camera: car nose, headlamp ---- */
+      const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 2500);
+      scene.add(camera);
+      const headlamp = new THREE.PointLight(0xffd9a8, 0.5, 45, 1.6); headlamp.position.set(0, 1.4, -9); camera.add(headlamp);
+      const rim = new THREE.PointLight(0xff3aa8, 0.3, 40, 1.8); rim.position.set(0, -0.2, 3); camera.add(rim);
+      const car = new THREE.Group();
+      car.add(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 3), new THREE.MeshStandardMaterial({ color: 0x0b0c26, metalness: 0.2, roughness: 0.85, emissive: 0x120a38, emissiveIntensity: 0.6 })));
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.05, 0.07), new THREE.MeshBasicMaterial({ color: 0xff3aa8 })); trim.position.set(0, 0.29, -1.45); car.add(trim);
+      car.position.set(0, -1.75, -2.6); camera.add(car);
+
+      const fp = V(0, 0, 0), ft = V(0, 0, 0), fu = V(0, 0, 0), la = V(0, 0, 0), lt = V(0, 0, 0), lu = V(0, 0, 0);
+      function frame(u, oP, oT, oU) {
+        const f = clamp(u, 0, 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), k = f - i;
+        oP.lerpVectors(pts[i], pts[i + 1], k); oT.lerpVectors(T[i], T[i + 1], k).normalize(); oU.lerpVectors(U[i], U[i + 1], k).normalize();
+      }
+      let baseFov = 62;
+      /* p: scroll progress 0..1. The camera is a pure function of p, so scrolling up reverses the ride. */
+      function setRide(p) {
+        const u = clamp(p, 0, 1) * 0.965;
+        frame(u, fp, ft, fu);
+        frame(u + 0.035, la, lt, lu);
+        camera.position.copy(fp).addScaledVector(fu, 1.2);
+        camera.up.copy(UPV).lerp(fu, 0.45).normalize();
+        la.addScaledVector(lu, 1.2); la.y -= 0.9;
+        camera.lookAt(la);
+        camera.fov = baseFov + clamp(-ft.y * 11, -2, 7);
+        camera.updateProjectionMatrix();
+        skyGroup.position.copy(camera.position);
+      }
+      function resize(w, h) { camera.aspect = w / h; baseFov = w / h < 1 ? 78 : 62; camera.updateProjectionMatrix(); }
+
+      return { scene, camera, setRide, resize, dispose: () => disposeScene(scene) };
+    }
+
+    /* =====================================================================
+       3. FERRIS WHEEL (own scene + camera, drawn bottom-right) AND SCROLL CONTROLLER
+       Only the wheel group rotates. Legs, base and ground never move. Cabins counter-rotate so they hang upright.
+       ===================================================================== */
+    function buildFerris() {
+      const scene = new THREE.Scene();
+      const glow = glowTexture();
+      const V = (x, y, z) => new THREE.Vector3(x, y, z);
+      scene.add(new THREE.HemisphereLight(0x8a7bff, 0x120d30, 0.8));
+      const key = new THREE.DirectionalLight(0xfff0d0, 0.8); key.position.set(-20, 30, 40); scene.add(key);
+      const cyan = new THREE.PointLight(0x3ae3ff, 0.9, 80); cyan.position.set(0, 12, 24); scene.add(cyan);
+      const steel = new THREE.MeshStandardMaterial({ color: 0xcfd3ff, metalness: 0.55, roughness: 0.4, emissive: 0x2b2475, emissiveIntensity: 0.55 });
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x1d1f58, metalness: 0.4, roughness: 0.6, emissive: 0x140f3d, emissiveIntensity: 0.8 });
+      const R = 10, HUB = 13.4, Z = 1.15, FOOT = 6.4;
+      const cols = [new THREE.Color(0xffc65c), new THREE.Color(0xff3aa8), new THREE.Color(0x3ae3ff)];
+
+      /* ground haze + base platform (static) */
+      const gc = document.createElement('canvas'); gc.width = gc.height = 128;
+      const gg = gc.getContext('2d'), gr = gg.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(12,10,40,.95)'); gr.addColorStop(0.7, 'rgba(12,10,40,.7)'); gr.addColorStop(1, 'rgba(12,10,40,0)');
+      gg.fillStyle = gr; gg.fillRect(0, 0, 128, 128);
+      const haze = new THREE.Mesh(new THREE.CircleGeometry(26, 40), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, depthWrite: false }));
+      haze.rotation.x = -Math.PI / 2; haze.position.y = 0.02; scene.add(haze);
+      const plat = new THREE.Mesh(new THREE.BoxGeometry(19, 0.5, 10.6), baseMat); plat.position.y = 0.25; scene.add(plat);
+      const legs = [], sb = new Bulbs();
+      for (let x = -9.4; x <= 9.4; x += 1.2) { sb.add(V(x, 0.62, 5.2), cols[0], 0.8); sb.add(V(x, 0.62, -5.2), cols[0], 0.8); }
+      for (let z = -4.4; z <= 4.4; z += 1.2) { sb.add(V(-9.4, 0.62, z), cols[0], 0.8); sb.add(V(9.4, 0.62, z), cols[0], 0.8); }
+
+      /* A-frame legs and braces (static) */
+      const xLeg = y => FOOT * (1 - (y - 0.5) / (HUB - 0.5));
+      const zLeg = (zs, y) => zs * Z * (2 - (y - 0.5) / (HUB - 0.5));
+      const levels = [0.5, 3.6, 7.2, 10.6];
+      [-1, 1].forEach(zs => {
+        [-1, 1].forEach(xs => {
+          legs.push([V(0, HUB, zs * Z), V(xs * FOOT, 0.5, zs * Z * 2), 0.28]);
+          for (let t = 0.08; t < 0.95; t += 0.09) sb.add(V(xs * FOOT * (1 - t), 0.5 + (HUB - 0.5) * t, zs * Z * (2 - t)), cols[0], 0.8);
+        });
+        for (let k = 1; k < levels.length; k++) legs.push([V(-xLeg(levels[k]), levels[k], zLeg(zs, levels[k])), V(xLeg(levels[k]), levels[k], zLeg(zs, levels[k])), 0.12]);
+        for (let k = 0; k < levels.length - 1; k++) {
+          const y0 = levels[k], y1 = levels[k + 1];
+          legs.push([V(-xLeg(y0), y0, zLeg(zs, y0)), V(xLeg(y1), y1, zLeg(zs, y1)), 0.07], [V(xLeg(y0), y0, zLeg(zs, y0)), V(-xLeg(y1), y1, zLeg(zs, y1)), 0.07]);
+        }
+      });
+      [-1, 1].forEach(xs => {
+        legs.push([V(xs * FOOT, 0.5, -Z * 2), V(xs * FOOT, 0.5, Z * 2), 0.22]);
+        for (let k = 1; k < levels.length; k++) legs.push([V(xs * xLeg(levels[k]), levels[k], -zLeg(1, levels[k])), V(xs * xLeg(levels[k]), levels[k], zLeg(1, levels[k])), 0.08]);
+      });
+      scene.add(membersMesh(legs, steel));
+      scene.add(sb.build(glow, 0.7));
+
+      /* rotating wheel */
+      const wheel = new THREE.Group(); wheel.position.y = HUB; scene.add(wheel);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2 * Z + 0.9, 16), steel); hub.rotation.x = Math.PI / 2; wheel.add(hub);
+      [-Z, Z].forEach(z => {
+        const t = new THREE.Mesh(new THREE.TorusGeometry(R, 0.17, 6, 72), steel); t.position.z = z; wheel.add(t);
+        const t2 = new THREE.Mesh(new THREE.TorusGeometry(R * 0.55, 0.1, 6, 48), steel); t2.position.z = z; wheel.add(t2);
+      });
+      const NS = 20, spokes = [];
+      for (let k = 0; k < NS; k++) {
+        const a = k / NS * Math.PI * 2, cx = Math.cos(a) * R, cy = Math.sin(a) * R;
+        [-Z, Z].forEach(z => spokes.push([V(0, 0, z), V(cx, cy, z), 0.07]));
+        spokes.push([V(cx, cy, -Z), V(cx, cy, Z), 0.08]);
+      }
+      wheel.add(membersMesh(spokes, steel));
+
+      const cabMats = [0xff3aa8, 0x3ae3ff, 0x8e44ff, 0xffc65c].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.34, roughness: 0.5 }));
+      const pivots = [];
+      for (let k = 0; k < 16; k++) {
+        const a = k / 16 * Math.PI * 2, piv = new THREE.Group();
+        piv.position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
+        const hang = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 6), steel); hang.position.y = -0.5;
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.2, 2), cabMats[k % 4]); cab.position.y = -1.6;
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(2, 0.16, 2.3), steel); roof.position.y = -0.92;
+        piv.add(hang, cab, roof); wheel.add(piv); pivots.push(piv);
+      }
+      const wb = new Bulbs();
+      for (let k = 0; k < 72; k++) {
+        const a = k / 72 * Math.PI * 2;
+        [-Z, Z].forEach(z => wb.add(V(Math.cos(a) * (R + 0.25), Math.sin(a) * (R + 0.25), z), cols[k % 3], 1));
+      }
+      for (let k = 0; k < NS; k++) {
+        const a = k / NS * Math.PI * 2;
+        for (let r = 2.6; r < R - 0.5; r += 1.6) wb.add(V(Math.cos(a) * r, Math.sin(a) * r, Z + 0.08), cols[(k + Math.round(r)) % 3], 0.9);
+      }
+      wheel.add(wb.build(glow, 1.0));
+
+      const camera = new THREE.PerspectiveCamera(32, 1, 1, 300);
+      function update(t, p, still) {
+        wheel.rotation.z = still ? 0.3 : t * 0.06;           // slow decorative spin, independent of scroll
+        pivots.forEach(pv => { pv.rotation.z = -wheel.rotation.z; });
+        camera.position.set(13 + (p - 0.5) * 3, 13.5, 44);   // tiny scroll parallax
+        camera.lookAt(0, 11.7, 0);
+      }
+      update(0, 0.5, true);
+      return { scene, camera, update, dispose: () => disposeScene(scene) };
+    }
+
+    const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+    const BEATS = N_EV + 2.4;          // ride length in "stops"; first card starts 2.2 stops away
+    const A_START = -2.2, A_END = N_EV + 0.2;
+
+    function boot() {
+      const canvas = $('#gl');
+      const offs = [];
+      const listen = (t, ty, fn, o) => { t.addEventListener(ty, fn, o); offs.push(() => t.removeEventListener(ty, fn, o)); };
+      const hasLibs = !!(window.THREE && window.gsap && window.ScrollTrigger);
+      const motion = hasLibs && !reduceMQ.matches;
+      let renderer = null, world = null, ferris = null;
+
+      if (hasLibs) {
+        try {
+          initThreeHelpers();
+          renderer = new THREE.WebGLRenderer({ canvas, antialias: !TIER.low, powerPreference: 'high-performance' });
+          renderer.setPixelRatio(TIER.dpr); renderer.autoClear = false; renderer.setClearColor(0x0a0620, 1);
+          world = buildCarnival(); ferris = buildFerris();
+        } catch (err) {
+          console.warn('3D scene unavailable, showing the static layout.', err);
+          if (renderer) renderer.dispose();
+          renderer = null; world = null; ferris = null;
+        }
+      }
+      const useMotion = motion && !!renderer;
+
+      /* ---- sizing ---- */
+      let W = 1, H = 1, fs = 300, vw = 1, vh = 1, fit = 1, prog = 0;
+      const vis = new Array(N_EV).fill(false), nearArr = new Array(N_EV).fill(false);
+      function measure() {
+        vw = showcase.clientWidth; vh = showcase.clientHeight;
+        let mh = 0; cardEls.forEach(c => { mh = Math.max(mh, c.offsetHeight); });
+        fit = clamp((vh - 150) / (mh || 1), 0.55, 1);
+      }
+      function resize() {
+        if (!renderer) return;
+        W = canvas.clientWidth || innerWidth; H = canvas.clientHeight || innerHeight;
+        renderer.setSize(W, H, false);
+        world.resize(W, H);
+        fs = Math.round(Math.min(W * (W < 700 ? 0.58 : 0.36), H * (W < 700 ? 0.42 : 0.68)));
+        measure();
+      }
+      function draw(t, still) {
+        renderer.setScissorTest(false);
+        renderer.setViewport(0, 0, W, H);
+        renderer.clear();
+        renderer.render(world.scene, world.camera);
+        ferris.update(t, prog, still);
+        renderer.setViewport(W - fs, 0, fs, fs);
+        renderer.setScissor(W - fs, 0, fs, fs);
+        renderer.setScissorTest(true);
+        renderer.clearDepth();
+        renderer.render(ferris.scene, ferris.camera);
+        renderer.setScissorTest(false);
+      }
+
+      /* ---- static layout: reduced motion, or no WebGL/libraries ---- */
+      if (!useMotion) {
+        showcase.classList.add('is-static');
+        cardEls.forEach(c => { c.removeAttribute('style'); c.inert = false; c.classList.add('near'); });
+        heroEl.removeAttribute('style');
+        if (renderer) {
+          prog = 0.1;
+          world.setRide(prog);
+          const redraw = () => { resize(); draw(0, true); };
+          redraw();
+          listen(window, 'resize', redraw);
+        } else {
+          canvas.style.display = 'none';
+          showcase.style.background = 'radial-gradient(120% 80% at 50% 0%,#2a1262 0%,#0b0d2a 55%,#060716 100%)';
+        }
+        return () => {
+          offs.forEach(f => f());
+          if (renderer) { world.dispose(); ferris.dispose(); renderer.dispose(); }
+          showcase.classList.remove('is-static'); canvas.style.display = ''; showcase.style.background = '';
+        };
+      }
+
+      /* ---- animated layout ---- */
+      showcase.classList.remove('is-static');
+      liveIdx = -2; nearest = -2; setLive(-1);
+      const DWELL = 0.16;
+
+      function layoutCards(A) {
+        for (let i = 0; i < N_EV; i++) {
+          const el = cardEls[i], ph = i - A;
+          if (ph > 4.2 || ph < -1.15) { if (vis[i]) { el.style.visibility = 'hidden'; vis[i] = false; } continue; }
+          if (!vis[i]) { el.style.visibility = 'visible'; vis[i] = true; }
+          const a = Math.sign(ph) * Math.max(0, Math.abs(ph) - DWELL);
+          const side = i % 2 ? 1 : -1;
+          let s, x, y, o, dim, ry;
+          if (a >= 0) {                         // approaching: small and far, sweeping in from beside the track
+            s = 1 / (1 + 1.35 * a);
+            const f = 1 - s;
+            x = side * f * vw * (vw < 700 ? 0.34 : 0.40);
+            y = -f * vh * 0.1;
+            o = clamp((3.8 - a) / 1.4, 0, 1);
+            dim = clamp(a * 0.3, 0, 0.62);
+            ry = -side * f * 22;
+          } else {                              // passed: swells and slides out to its side
+            const q = -a;
+            s = 1 + q * 0.8; x = side * q * vw * 0.55; y = q * vh * 0.1;
+            o = clamp(1 - q / 0.85, 0, 1); dim = q * 0.4; ry = side * q * 24;
+          }
+          const nr = Math.abs(ph) < 1.25;
+          if (nr !== nearArr[i]) { nearArr[i] = nr; el.classList.toggle('near', nr); }
+          el.style.opacity = o.toFixed(3);
+          el.style.zIndex = String(100 - Math.round(Math.abs(ph) * 10));
+          el.style.setProperty('--dim', dim.toFixed(3));
+          el.style.transform = `translate(-50%,-50%) translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotateY(${ry.toFixed(1)}deg) scale(${(s * fit).toFixed(4)})`;
+        }
+      }
+
+      /* One function maps scroll progress to everything: camera, cards, hero, HUD. */
+      function apply(p) {
+        prog = p;
+        world.setRide(p);
+        const A = lerp(A_START, A_END, p);
+        layoutCards(A);
+        const h = 1 - smooth(p / 0.08);
+        heroEl.style.opacity = h.toFixed(3);
+        heroEl.style.visibility = h > 0.01 ? 'visible' : 'hidden';
+        heroEl.style.transform = `translateY(${(-p * 60).toFixed(1)}px)`;
+        fillEl.style.setProperty('--p', p.toFixed(4));
+        setNearest(clamp(Math.round(A), 0, N_EV - 1));
+        let live = -1;
+        for (let i = 0; i < N_EV; i++) if (Math.abs(i - A) < 0.4) live = i;
+        setLive(live);
+      }
+
+      gsap.registerPlugin(ScrollTrigger);
+      const proxy = { p: 0 };
+      let st = null;
+      const ctx = gsap.context(() => {
+        const tw = gsap.to(proxy, {
+          p: 1, ease: 'none', onUpdate: () => apply(proxy.p),
+          scrollTrigger: {
+            trigger: showcase, start: 'top top', pin: true, anticipatePin: 1, scrub: 0.7, invalidateOnRefresh: true,
+            end: () => '+=' + Math.round(innerHeight * BEATS * (TIER.low ? 0.8 : 0.95)),
+            onRefresh: () => { measure(); apply(proxy.p); }
+          }
+        });
+        st = tw.scrollTrigger;
+      });
+      jumpTo = i => {
+        if (!st) return;
+        const target = st.start + ((i - A_START) / (A_END - A_START)) * (st.end - st.start);
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      };
+
+      resize();
+      apply(0);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measure(); apply(proxy.p); });
+      if (window.ResizeObserver) { const ro = new ResizeObserver(() => { resize(); apply(proxy.p); }); ro.observe(canvas); offs.push(() => ro.disconnect()); }
+      else listen(window, 'resize', () => { resize(); apply(proxy.p); });
+
+      /* ---- render loop: runs only while the stage is on screen and the tab is visible ---- */
+      const t0 = performance.now();
+      let raf = 0, inView = true, running = false;
+      const frame = now => { raf = requestAnimationFrame(frame); draw((now - t0) / 1000, false); };
+      const sync = () => {
+        const want = inView && !document.hidden;
+        if (want && !running) { running = true; raf = requestAnimationFrame(frame); }
+        else if (!want && running) { running = false; cancelAnimationFrame(raf); }
+      };
+      const io = new IntersectionObserver(es => { inView = es[0].isIntersecting; sync(); }, { threshold: 0 });
+      io.observe(showcase);
+      offs.push(() => io.disconnect());
+      listen(document, 'visibilitychange', sync);
+      listen(canvas, 'webglcontextlost', e => { e.preventDefault(); inView = false; sync(); });
+      listen(canvas, 'webglcontextrestored', () => { inView = true; sync(); });
+      sync();
+
+      return () => {
+        running = false; cancelAnimationFrame(raf);
+        offs.forEach(f => f());
+        ctx.revert();
+        jumpTo = () => { };
+        world.dispose(); ferris.dispose(); renderer.dispose();
+        cardEls.forEach(c => { c.removeAttribute('style'); c.classList.remove('near', 'is-live'); });
+        heroEl.removeAttribute('style');
+      };
+    }
+
+
+    /* Homepage tent stays the exact supplied illustration; scroll only scales/translates it without distortion. */
+    const homeSection = document.querySelector('#carnival-home');
+    const heroTent = document.querySelector('.main-tent');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let homeFrame = 0;
+    function updateHomeScroll() {
+      homeFrame = 0; if (!homeSection || !heroTent || reduceMotion.matches) return;
+      const r = homeSection.getBoundingClientRect();
+      const p = clamp(-r.top / Math.max(1, homeSection.offsetHeight), 0, 1);
+      heroTent.style.transform = `translateX(-50%) translateY(${p * 42}px) scale(${1 - p * .26})`;
+      heroTent.style.opacity = String(1 - p * .22);
+      homeSection.style.setProperty('--home-scroll', p.toFixed(3));
+    }
+    window.addEventListener('scroll', () => { if (!homeFrame) homeFrame = requestAnimationFrame(updateHomeScroll) }, { passive: true });
+    window.addEventListener('resize', updateHomeScroll); updateHomeScroll();
+    const deptButtons = [...document.querySelectorAll('.department-tent')];
+    const deptNote = document.querySelector('#departmentNote');
+    let selectedDepartment = '';
+    deptButtons.forEach(btn => btn.addEventListener('click', () => {
+      selectedDepartment = btn.dataset.department;
+      deptButtons.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+      if (deptNote) deptNote.textContent = `${selectedDepartment} selected. The current HTML contains demonstration carnival events, not verified department event records. Connect this department to the project's real event data before publishing event listings.`;
+      const kicker = document.querySelector('#heroKicker');
+      if (kicker) kicker.textContent = `Selected department · ${selectedDepartment}`;
+      document.querySelector('#showcase')?.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'start' });
+    }));
+
+    let teardown = boot();
+    reduceMQ.addEventListener('change', () => { teardown(); teardown = boot(); });
+  })();
+</script>
