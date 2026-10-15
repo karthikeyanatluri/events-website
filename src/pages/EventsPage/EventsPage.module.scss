@@ -9,7 +9,9 @@
 ========================================================= */
 
 .fullPageContainer {
-    background-image: url(../../assets/Events/eventsPagebg.webp);
+    /* night carnival artwork supplied for the Events page */
+    background-color: #0b0716;
+    background-image: url(../../assets/Events/events-carnival-bg.webp);
     background-position: bottom center;
     background-repeat: no-repeat;
     background-size: cover;
@@ -71,21 +73,15 @@
 /* =========================================================
    DEPARTMENT TENTS
 
-   .tentStage covers the scene and holds two rows: the upper
-   row (4 tents) stands on the stone bench, the lower row
-   (3 tents, a little larger as they are nearer) on the floor.
-   Both rows are centred, so the 3 lower tents fall between
-   the 4 upper ones, which gives the same staggered shelf
-   look the vases had.
+   The tents are scattered around the carnival ground. Each
+   tent gets its spot for every screen shape from TENT_SPOTS
+   in EventsPage.tsx as --x-*, --b-* and --s-* (centre, base
+   and size); the rules below pick the wide, tall or short set.
+   Nearer tents (lower base) are drawn in front of farther ones.
 
-   --tent-w is the upper-row tent width. It is capped by the
-   viewport width, by its height, and by the band between the
-   bottom of the hanging sign (--sign-clearance, which follows
-   the sign's own scale at each breakpoint) and the bench top,
-   so on short laptop screens the tents shrink instead of
-   covering the sign (never below 140px). --tent-w-lower is
-   the lower row: up to 1.3x larger, but never tall enough to
-   reach the upper row.
+   --tent-w is the width of a size-1 tent. It is capped by both
+   the screen width and height, so the spots keep the same
+   proportions, and never overlap, on any screen.
 
    The stage itself ignores the pointer; only the tents take
    clicks. It sits above the scene-dimming layer (see
@@ -93,123 +89,61 @@
 ========================================================= */
 
 .tentStage {
+    --tent-w: min(20vw, 34dvh);
+
     position: absolute;
     inset: 0;
     z-index: 2;
     pointer-events: none;
 }
 
-/* =========================================================
-   SCATTERED CARNIVAL GROUNDS PLACEMENT (DESKTOP)
-   Medium, balanced department tents distributed naturally across
-   the fairground terrain with organic depth, true perspective,
-   and realistic ground-contact anchoring.
-========================================================= */
-
-/* Back tier of the central grounds - naturally scattered on the grass */
-.tent[data-department="ai"] {
-    left: 6.5%;
-    bottom: 23%;
-    width: min(18vw, 24.5dvh);
-    z-index: 4;
-}
-
-.tent[data-department="ece"] {
-    left: 54%;
-    bottom: 19%;
-    width: min(19vw, 26dvh);
-    z-index: 5;
-}
-
-.tent[data-department="eie"] {
-    left: 77.5%;
-    bottom: 21%;
-    width: min(18vw, 24.5dvh);
-    z-index: 4;
-}
-
-/* Mid tier of the central grounds - stepping forward */
-.tent[data-department="cse"] {
-    left: 19.5%;
-    bottom: 15.5%;
-    width: min(19.5vw, 26.5dvh);
-    z-index: 5;
-}
-
-/* Foreground tier of the central grounds - anchored firmly on the foreground lawn */
-.tent[data-department="civil"] {
-    left: 2%;
-    bottom: 3.5%;
-    width: min(23vw, 31dvh);
-    z-index: 7;
-}
-
-.tent[data-department="eee"] {
-    left: 36.5%;
-    bottom: 4.5%;
-    width: min(23.5vw, 31.5dvh);
-    z-index: 8;
-}
-
-.tent[data-department="mechanical"] {
-    left: 70.5%;
-    bottom: 3.5%;
-    width: min(23vw, 31dvh);
-    z-index: 7;
-}
-
 /* the button: whole tent is the click / focus target */
 .tent {
+    --x: var(--x-wide);
+    --b: var(--b-wide);
+    --s: var(--s-wide);
+
     position: absolute;
-    aspect-ratio: 583 / 526;
+    left: calc(var(--x) * 1%);
+    bottom: calc(var(--b) * 1%);
+    z-index: calc(200 - var(--b) * 2);
+    translate: -50% 0;
+
+    width: calc(var(--tent-w) * var(--s));
+    aspect-ratio: 550 / 393;
 
     padding: 0;
     border: 0;
+    border-radius: 12px;
     background: none;
 
     cursor: pointer;
     pointer-events: auto;
     -webkit-tap-highlight-color: transparent;
+}
 
-    /* Realistic contact shadow directly beneath visible tent canvas & support poles (anchored at y=470, ~10.6% from bottom) */
-    &::before {
-        content: "";
-        position: absolute;
-        left: 6%;
-        right: 6%;
-        bottom: 9.5%;
-        height: clamp(12px, 3.8%, 22px);
-        border-radius: 50%;
-        background: radial-gradient(
-            ellipse at 50% 50%,
-            rgba(5, 4, 3, 0.9) 0%,
-            rgba(12, 10, 6, 0.6) 42%,
-            rgba(18, 15, 8, 0.2) 70%,
-            transparent 100%
-        );
-        pointer-events: none;
-        z-index: -1;
-        filter: blur(4px);
+/* phones and portrait tablets */
+@media screen and (orientation: portrait) {
+
+    .tentStage {
+        --tent-w: min(36vw, 17dvh);
     }
 
-    /* Soft ambient occlusion fading across the turf and ground terrain */
-    &::after {
-        content: "";
-        position: absolute;
-        left: 1.5%;
-        right: 1.5%;
-        bottom: 7.5%;
-        height: clamp(18px, 6%, 32px);
-        border-radius: 50%;
-        background: radial-gradient(
-            ellipse at 50% 50%,
-            rgba(7, 6, 4, 0.48) 0%,
-            rgba(14, 12, 7, 0.2) 50%,
-            transparent 80%
-        );
-        pointer-events: none;
-        z-index: -2;
-        filter: blur(8px);
+    .tent {
+        --x: var(--x-tall);
+        --b: var(--b-tall);
+        --s: var(--s-tall);
+    }
+}
+
+/* phones held sideways: the hanging sign covers the left of
+   the field, so the tents line up loosely along the front */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+
+    .tent {
+        --x: var(--x-short);
+        --b: var(--b-short);
+        --s: var(--s-short);
     }
 }
 
@@ -228,43 +162,62 @@
         display: block;
         width: 100%;
         height: 100%;
-        object-fit: contain;
         pointer-events: none;
 
         transition: filter 0.35s ease;
     }
 }
 
-/* sits on the banner across the front of the tent; proportionally
-   scaled so long names like MECHANICAL fit comfortably inside without overflow */
+/* sits on the banner across the front of the tent; the size
+   shrinks for long names so MECHANICAL fits like AI does */
 .tentLabel {
     position: absolute;
     left: 50%;
-    top: 66%;
+    // centred on the banner; a two-line name sits a little higher
+    // so it stays clear of the doorway
+    top: calc(71% - (var(--label-lines, 1) - 1) * 5%);
     translate: -50% -50%;
 
-    max-width: 72%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 86%;
+    // names can be split over two lines with "\n" (schools.ts)
+    white-space: pre;
     text-align: center;
     pointer-events: none;
 
-    font-family: "Syamsiah", serif;
-    font-size: clamp(
-        11px,
-        min(12.5cqi, calc(62cqi / max(4.2, var(--label-length)))),
-        26px
+    // bold Roman capitals in carved gold, like the signboards
+    // in the reference tent artwork
+    font-family: "Cinzel", serif;
+    font-weight: 700;
+    // as big as fits: capped at 18cqi for one line (11cqi for
+    // two), and smaller for long names so they fit the banner
+    // (Cinzel bold capitals average ~0.8em wide)
+    font-size: min(
+        calc(18cqi - (var(--label-lines, 1) - 1) * 7cqi),
+        calc(84cqi / (var(--label-length) * 0.82))
     );
-    line-height: 1;
+    line-height: 1.08;
     letter-spacing: 0.03em;
-    color: #f3dcb0;
 
-    text-shadow:
-        0 0 1px #1a0d2e,
-        0 0 2px #1a0d2e,
-        0 1px 3px rgba(0, 0, 0, 0.9),
-        0 0 0.35em rgba(18, 8, 38, 0.8);
+    // gold leaf: pale at the top of each letter, deep amber at
+    // the bottom, repeated per line
+    color: transparent;
+    background:
+        linear-gradient(
+            180deg,
+            #fff3cf 8%,
+            #f6cf7a 42%,
+            #d99a3a 72%,
+            #a8661b 96%
+        )
+        0 0 / 100% 1.08em repeat-y;
+    -webkit-background-clip: text;
+    background-clip: text;
+
+    // a dark carved edge so the gold reads on any stripe
+    filter:
+        drop-shadow(0 1px 0 #3d1a06)
+        drop-shadow(0 0 1.5px rgba(20, 8, 0, 0.95))
+        drop-shadow(0 2px 4px rgba(0, 0, 0, 0.65));
 }
 
 /* hover (and tap, keyboard focus, and the tent whose wand
@@ -282,7 +235,7 @@
                 0 0 12px
                 rgba(224, 174, 50, 0.5)
             )
-            brightness(1.1);
+            brightness(1.08);
     }
 }
 
@@ -422,234 +375,6 @@
 
 
 /* =========================================================
-   TENTS - TABLET (<= 1024px)
-========================================================= */
-
-@media screen and (max-width: 1024px) {
-
-    .tent[data-department="ai"] {
-        left: 4%;
-        bottom: 22%;
-        width: min(20vw, 24dvh);
-        z-index: 4;
-    }
-
-    .tent[data-department="civil"] {
-        left: 2%;
-        bottom: 5%;
-        width: min(24vw, 29dvh);
-        z-index: 7;
-    }
-
-    .tent[data-department="cse"] {
-        left: 20%;
-        bottom: 15%;
-        width: min(21vw, 25.5dvh);
-        z-index: 5;
-    }
-
-    .tent[data-department="eee"] {
-        left: 37%;
-        bottom: 5%;
-        width: min(24.5vw, 29.5dvh);
-        z-index: 8;
-    }
-
-    .tent[data-department="ece"] {
-        left: 54%;
-        bottom: 18%;
-        width: min(20.5vw, 25dvh);
-        z-index: 5;
-    }
-
-    .tent[data-department="mechanical"] {
-        left: 70%;
-        bottom: 5%;
-        width: min(24vw, 29dvh);
-        z-index: 7;
-    }
-
-    .tent[data-department="eie"] {
-        left: 77%;
-        bottom: 20%;
-        width: min(19.5vw, 23.5dvh);
-        z-index: 4;
-    }
-}
-
-
-/* =========================================================
-   TENTS - MOBILE (<= 700px)
-   Balanced proportions distributed across the fairground ground.
-========================================================= */
-
-@media screen and (max-width: 700px) {
-
-    .tent[data-department="ai"] {
-        left: 4%;
-        bottom: 27%;
-        width: min(32vw, 16dvh);
-        z-index: 4;
-    }
-
-    .tent[data-department="cse"] {
-        left: 20%;
-        bottom: 18%;
-        width: min(34vw, 17dvh);
-        z-index: 5;
-    }
-
-    .tent[data-department="ece"] {
-        left: 56%;
-        bottom: 25%;
-        width: min(32vw, 16dvh);
-        z-index: 4;
-    }
-
-    .tent[data-department="eie"] {
-        left: 66%;
-        bottom: 16%;
-        width: min(32vw, 16dvh);
-        z-index: 5;
-    }
-
-    .tent[data-department="civil"] {
-        left: 2%;
-        bottom: 6%;
-        width: min(38vw, 19dvh);
-        z-index: 7;
-    }
-
-    .tent[data-department="eee"] {
-        left: 31%;
-        bottom: 3%;
-        width: min(38vw, 19dvh);
-        z-index: 8;
-    }
-
-    .tent[data-department="mechanical"] {
-        left: 60%;
-        bottom: 4%;
-        width: min(38vw, 19dvh);
-        z-index: 8;
-    }
-}
-
-/* =========================================================
-   TENTS - SHORT LANDSCAPE (phones held sideways, <= 500px tall)
-========================================================= */
-
-@media screen and (max-height: 500px) and (orientation: landscape) {
-
-    .tent[data-department="ai"] {
-        left: 3%;
-        bottom: 23%;
-        width: 15vw;
-    }
-
-    .tent[data-department="civil"] {
-        left: 4%;
-        bottom: 4%;
-        width: 19vw;
-    }
-
-    .tent[data-department="cse"] {
-        left: 20%;
-        bottom: 16%;
-        width: 16.5vw;
-    }
-
-    .tent[data-department="eee"] {
-        left: 39%;
-        bottom: 5%;
-        width: 19.5vw;
-    }
-
-    .tent[data-department="ece"] {
-        left: 55%;
-        bottom: 19%;
-        width: 16vw;
-    }
-
-    .tent[data-department="eie"] {
-        left: 78%;
-        bottom: 22%;
-        width: 15vw;
-    }
-
-    .tent[data-department="mechanical"] {
-        left: 71%;
-        bottom: 4%;
-        width: 19vw;
-    }
-}
-
-
-/* =========================================================
-   TITLE
-========================================================= */
-
-.title {
-    display: none !important;
-}
-
-
-/* =========================================================
-   <= 1600px
-========================================================= */
-
-@media screen and (max-width: 1600px) {
-
-    .title {
-        scale: 0.7;
-        top: -8%;
-    }
-}
-
-
-/* =========================================================
-   <= 1200px
-========================================================= */
-
-@media screen and (max-width: 1200px) {
-
-    .title {
-        scale: 0.58;
-        top: -9%;
-        left: -4%;
-    }
-}
-
-
-/* =========================================================
-   <= 975px
-========================================================= */
-
-@media screen and (max-width: 975px) {
-
-    .title {
-        scale: 0.58;
-        top: -9%;
-        left: -4%;
-    }
-}
-
-
-/* =========================================================
-   <= 900px
-========================================================= */
-
-@media screen and (max-width: 900px) {
-
-    .title {
-        scale: 0.58;
-        top: -9%;
-        left: -4%;
-    }
-}
-
-
-/* =========================================================
    <= 700px
 ========================================================= */
 
@@ -665,12 +390,6 @@
 
         background-position: center bottom;
     }
-
-    .title {
-        scale: 0.48;
-        top: -10%;
-        left: -8%;
-    }
 }
 
 
@@ -685,27 +404,6 @@
         height: 100dvh;
         min-height: 100dvh;
     }
-
-
-    .title {
-        left: -13%;
-        top: -8%;
-        filter: brightness(2);
-        scale: 0.45;
-    }
-}
-
-
-/* =========================================================
-   440px WIDTH
-========================================================= */
-
-@media screen and (min-width: 401px) and (max-width: 460px) {
-
-    .title {
-        left: -12%;
-        top: -8%;
-    }
 }
 
 
@@ -718,26 +416,6 @@
     .fullPageContainer {
         height: 100dvh;
         min-height: 100dvh;
-    }
-
-    .title {
-        left: -18%;
-        top: -8%;
-        scale: 0.35;
-    }
-}
-
-
-/* =========================================================
-   <= 365px
-========================================================= */
-
-@media screen and (max-width: 365px) {
-
-    .title {
-        left: -18%;
-        top: -8%;
-        scale: 0.35;
     }
 }
 
@@ -944,7 +622,6 @@
     color: #f5eee3;
 
     font-size: 15px;
-
 }
 
 .detail {
@@ -1050,7 +727,6 @@
     color: #e5ad2f;
 
     text-decoration: none;
-
 }
 
 
@@ -1472,122 +1148,125 @@
         height: 100dvh;
         min-height: 100dvh;
     }
-
-    .title {
-        display: none;
-        left: -13%;
-        top: -8%;
-        filter: brightness(2);
-        scale: 0.45;
-    }
-
 }
 
 /* =========================================================
-   SPARSE CARNIVAL CROWD
-   Realistic college-age student visitors distributed along walking
-   paths between department tents, with authentic perspective, ground
-   contact shadows, and festival rim lighting.
+   CARNIVAL BACKGROUND ON PORTRAIT SCREENS
+
+   A tall screen only shows a narrow slice of the wide
+   carnival art; shift that slice right so the ferris wheel is
+   in view. Kept last so it wins over the <= 700px rule.
 ========================================================= */
 
-.crowdLayer {
+@media screen and (orientation: portrait) {
+
+    .fullPageContainer {
+        background-position: 82% bottom;
+    }
+}
+
+
+/* =========================================================
+   SCREEN-READER ONLY TEXT
+========================================================= */
+
+.visuallyHidden {
     position: absolute;
-    inset: 0;
-    z-index: 6;
-    pointer-events: none;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
     overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
-.crowdCluster {
+
+/* =========================================================
+   BACK TO THE TICKETS
+
+   A small gold ticket under the nav's top-left corner.
+========================================================= */
+
+.backButton {
     position: absolute;
-    pointer-events: none;
-    filter: drop-shadow(0 2px 5px rgba(4, 3, 8, 0.7));
-    animation: crowdIdle 6s ease-in-out infinite alternate;
-}
+    top: 88px;
+    left: 24px;
+    z-index: 30;
 
-@keyframes crowdIdle {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-1.5px); }
-}
+    padding: 13px 30px 13px 24px;
+    border: 0;
+    border-radius: 8px;
 
-.crowdSvg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-}
+    font-family: "EB Garamond", serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #321005;
 
-.crowdShadow {
-    fill: rgba(5, 4, 3, 0.88);
-    filter: blur(2.5px);
-}
+    background: none;
+    isolation: isolate;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 
-.personRimLight {
-    fill: none;
-    stroke: rgba(255, 225, 140, 0.6);
-    stroke-width: 1.4;
-    stroke-linecap: round;
-}
+    span[aria-hidden="true"] {
+        font-size: 18px;
+        line-height: 1;
+        transform: translateY(-0.5px);
+    }
 
-/* Cluster 1: Main foreground walking path between Civil and EEE */
-.crowdCivilEeePath {
-    left: 27.5%;
-    bottom: 7%;
-    width: clamp(42px, 4.4vw, 62px);
-    height: clamp(50px, 5.8dvh, 74px);
-    animation-delay: 0.2s;
-}
+    // the parchment, cut by the side notches above
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: 8px;
+        background: linear-gradient(160deg, #fad885, #e4ac3f 55%, #cb8c24);
+        box-shadow:
+            inset 0 0 0 2.5px rgba(90, 40, 10, 0.4),
+            0 6px 18px rgba(0, 0, 0, 0.5);
+        mask:
+            radial-gradient(circle at 0 50%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
+            radial-gradient(circle at 100% 50%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
+    }
 
-/* Cluster 2: Main foreground walking path between EEE and Mechanical */
-.crowdEeeMechPath {
-    left: 63%;
-    bottom: 7%;
-    width: clamp(42px, 4.4vw, 62px);
-    height: clamp(50px, 5.8dvh, 74px);
-    animation-delay: 0.8s;
-}
+    transition:
+        transform 0.25s ease,
+        filter 0.25s ease;
 
-/* Cluster 3: Central curved promenade between CSE and EEE */
-.crowdCenterWalkway {
-    left: 37%;
-    bottom: 16.5%;
-    width: clamp(54px, 5.8vw, 84px);
-    height: clamp(46px, 5.4dvh, 68px);
-    animation-delay: 0.5s;
-}
+    &:hover,
+    &:focus-visible {
+        transform: translateY(-2px) rotate(-1.5deg) scale(1.03);
+        filter: drop-shadow(0 0 14px rgba(255, 205, 95, 0.75));
+    }
 
-/* Cluster 4: Path approaching the Ferris wheel in the distance */
-.crowdFerrisWalkway {
-    left: 47%;
-    bottom: 23%;
-    width: clamp(28px, 3vw, 44px);
-    height: clamp(36px, 4.2dvh, 54px);
-    animation-delay: 1.4s;
-    opacity: 0.88;
-}
-
-/* Cluster 5: Walkway near AI and CSE */
-.crowdAiCseLane {
-    left: 24.5%;
-    bottom: 23.5%;
-    width: clamp(30px, 3.2vw, 46px);
-    height: clamp(38px, 4.4dvh, 56px);
-    animation-delay: 1.1s;
-    opacity: 0.92;
+    &:focus-visible {
+        outline: 2px solid rgba(224, 174, 50, 0.9);
+        outline-offset: 4px;
+    }
 }
 
 @media screen and (max-width: 700px) {
-    .crowdFerrisWalkway,
-    .crowdAiCseLane,
-    .crowdCivilEeePath,
-    .crowdEeeMechPath {
-        display: none;
-    }
 
-    .crowdCenterWalkway {
-        left: 40%;
-        bottom: 12.5%;
-        width: 42px;
-        height: 40px;
+    .backButton {
+        top: 72px;
+        left: 14px;
+        font-size: 16px;
+        padding: 9px 22px 9px 18px;
+
+        span[aria-hidden="true"] {
+            font-size: 14px;
+        }
+
+        &::before {
+            mask:
+                radial-gradient(circle at 0 50%, transparent 8px, #000 8.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 50%, transparent 8px, #000 8.5px) right / 51% 100% no-repeat;
+        }
     }
 }
+

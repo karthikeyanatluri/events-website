@@ -29,13 +29,13 @@ export default function Nav() {
 
       {/* Desktop / Tablet Navigation Links */}
       <nav className="nav-links desktop-only" aria-label="Primary Navigation">
-        <Link className="btn primary small" to="/register">
+        <Link className="btn primary small" to="#" onClick={(e) => e.preventDefault()}>
           Register
         </Link>
-        <Link className="nav-link" to="/about">
+        <Link className="nav-link" to="#" onClick={(e) => e.preventDefault()}>
           About Us
         </Link>
-        <Link className="nav-link" to="/contact">
+        <Link className="nav-link" to="#" onClick={(e) => e.preventDefault()}>
           Contact Us
         </Link>
       </nav>
@@ -61,22 +61,22 @@ export default function Nav() {
         <div className="mobile-menu-inner">
           <Link
             className="btn primary small mobile-reg-btn"
-            to="/register"
-            onClick={() => setMobileMenuOpen(false)}
+            to="#"
+            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
           >
             Register
           </Link>
           <Link
             className="mobile-nav-link"
-            to="/about"
-            onClick={() => setMobileMenuOpen(false)}
+            to="#"
+            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
           >
             About Us
           </Link>
           <Link
             className="mobile-nav-link"
-            to="/contact"
-            onClick={() => setMobileMenuOpen(false)}
+            to="#"
+            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
           >
             Contact Us
           </Link>

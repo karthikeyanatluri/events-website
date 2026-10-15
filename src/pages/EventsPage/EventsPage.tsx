@@ -1,5 +1,3 @@
-import Nav from "../../components/Nav";
-import { getDepartmentEvents } from "../../data/eventsData";
 import {
     useEffect,
     useRef,
@@ -7,8 +5,18 @@ import {
     type CSSProperties,
     type MouseEvent as ReactMouseEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
+import {
+    Navigate,
+    useLocation,
+    useNavigate,
+    useParams,
+} from "react-router-dom";
+
+import Nav from "../../components/Nav";
+
+import Curtains from "./Curtains";
+import { SCHOOLS, schoolBySlug, type School } from "./schools";
 import styles from "./EventsPage.module.scss";
 
 import tentViolet from "../../assets/Events/tents/tent-violet.webp";
@@ -19,50 +27,43 @@ import tentAmethyst from "../../assets/Events/tents/tent-amethyst.webp";
 import tentWine from "../../assets/Events/tents/tent-wine.webp";
 import tentRoyal from "../../assets/Events/tents/tent-royal.webp";
 
-
-interface EventData {
-    id: string;
-    name: string;
-    category: string;
-    club_name: string | null;
-    venue: string | null;
-    description: string | null;
-    image_url: string | null;
-    rulebook: string | null;
-}
-
 /* =========================================================
    DEPARTMENTS
 
-   The one list that drives the tents, in display order. The
-   first UPPER_ROW_COUNT sit on the upper row and the rest on
-   the lower row. Edit names here; each tent's key and
-   data-department use the lowercase slug (e.g. "ai").
+   Each school's tents (names, spots, colours) are set in
+   schools.ts. A department is just
+   its tent's name; "\n" in a name splits it over two lines.
 ========================================================= */
 
-const departments = [
-    "AI",
-    "CIVIL",
-    "CSE",
-    "ECE",
-    "EEE",
-    "EIE",
-    "MECHANICAL",
-] as const;
-
-type Department = (typeof departments)[number];
+type Department = string;
 
 function slugOf(department: Department) {
-    return department.toLowerCase();
+    return department.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+function spotStyle(school: School, index: number): CSSProperties {
+    const style: Record<string, number> = {};
+
+    for (const layout of ["wide", "tall", "short"] as const) {
+        const spots = school.spots[layout];
+        const [x, bottom, size] = spots[index % spots.length];
+
+        style[`--x-${layout}`] = x;
+        style[`--b-${layout}`] = bottom;
+        style[`--s-${layout}`] = size;
+    }
+
+    return style as CSSProperties;
 }
 
 /* =========================================================
    TENT SHADES
 
    Palette variants of tent-clean.png (stripes recoloured to
-   the page's jewel tones). Tent i uses shade i, cycling if
-   more departments are added. `smoke` is the colour of the
-   smoke that rises once the wand has spun over that tent.
+   the page's jewel tones). Tent i uses shade i (cycling) unless
+   its school picks colours (shades in schools.ts). `smoke` is
+   the colour of the smoke that rises once the wand has spun
+   over that tent.
 ========================================================= */
 
 const TENT_SHADES = [
@@ -75,32 +76,15 @@ const TENT_SHADES = [
     { src: tentRoyal, smoke: "#1a2a6b" },
 ];
 
-function shadeOf(department: Department) {
+function shadeOf(school: School, department: Department) {
+    const index = school.departments.indexOf(department);
+
     return TENT_SHADES[
-        departments.indexOf(department) %
-            TENT_SHADES.length
+        (school.shades?.[index] ?? index) % TENT_SHADES.length
     ];
 }
 
 
-
-/* =========================================================
-   EVENT DATA
-
-   Events per department, shown in the modal when its tent is
-   clicked. A department with no entry opens the "No Events
-   Found" card.
-========================================================= */
-
-const eventsData: Record<Department, EventData[]> = {
-    AI: getDepartmentEvents("AI") as unknown as EventData[],
-    CIVIL: getDepartmentEvents("CIVIL") as unknown as EventData[],
-    CSE: getDepartmentEvents("CSE") as unknown as EventData[],
-    ECE: getDepartmentEvents("ECE") as unknown as EventData[],
-    EEE: getDepartmentEvents("EEE") as unknown as EventData[],
-    EIE: getDepartmentEvents("EIE") as unknown as EventData[],
-    MECHANICAL: getDepartmentEvents("MECHANICAL") as unknown as EventData[],
-};
 
 /* =========================================================
    TENT LEDS
@@ -224,28 +208,9 @@ const DIVE_MS = 1300;
 
 const DIVE_MAX_SCALE = 36;
 
-// the modal opens this long after the dive ends
-const INSIDE_SETTLE_MS = 200;
-
-// must match the opacity transition on .tentInteriorLeaving
-const INSIDE_FADE_OUT_MS = 600;
-
 // the doorway in the tent images, as fractions of the image:
 // its centre and its width
 const TENT_DOOR = { x: 0.5, y: 0.85, width: 0.14 };
-
-/* =========================================================
-   INSIDE THE TENT
-
-   Artwork for the inside of each tent, shown when the camera
-   has dived in. Until it is added, a placeholder canopy in
-   the tent's colour is drawn in CSS (.tentInterior). To add
-   it, import the image above and map it here, e.g.
-   { AI: aiInside, CIVIL: civilInside }; a department without
-   an entry keeps the placeholder.
-========================================================= */
-
-const TENT_INTERIORS: Partial<Record<Department, string>> = {};
 
 const DEFAULT_SMOKE_COLOR = "#5b5189";
 
@@ -1719,14 +1684,59 @@ const makeSoftSprite = (
     );
 }
 
-
-
 /* =========================================================
    EVENTS PAGE
 ========================================================= */
 
-export default function EventsPage() {
+/* =========================================================
+   EVENTS PAGE (/events/:school)
+
+   Picks the school from the URL (see schools.ts) and shows its
+   tents; an unknown school goes back to the Tickets page.
+========================================================= */
+
+export default function EventsPage({
+    initialSchool,
+    embedded = false,
+}: {
+    initialSchool?: School;
+    embedded?: boolean;
+} = {}) {
+    const { school: slug } = useParams();
+    const school = (slug ? schoolBySlug(slug) : null) || initialSchool || SCHOOLS[0];
+
+    if (!school) {
+        return <Navigate to="/events" replace />;
+    }
+
+    return (
+        <SchoolTents
+            key={school.slug}
+            school={school}
+            embedded={embedded}
+        />
+    );
+}
+
+function SchoolTents({
+    school,
+    embedded = false,
+}: {
+    school: School;
+    embedded?: boolean;
+}) {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // arriving through a ticket: the Tickets page already loaded
+    // every image and closed the curtains, so skip the preloader
+    // and open the curtains on this school's tents
+    const fromTicket = Boolean(
+        (location.state as { fromTicket?: boolean } | null)?.fromTicket
+    );
+
+    const [curtainsOpen, setCurtainsOpen] = useState(!fromTicket);
+
     // the scene that the "camera" dives into (background, sign
     // and tents; the nav stays put)
     const sceneRef =
@@ -1753,12 +1763,6 @@ export default function EventsPage() {
 
         sequenceTimersRef.current = [];
     };
-
-    const [
-        selectedCategory,
-        setSelectedCategory,
-    ] =
-        useState<Department | null>(null);
 
     const [
         spellOrigin,
@@ -1809,22 +1813,6 @@ export default function EventsPage() {
         setDiving,
     ] = useState(false);
 
-    // the inside of the tent, shown at the end of the dive
-    const [
-        inside,
-        setInside,
-    ] = useState(false);
-
-    const [
-        leavingTent,
-        setLeavingTent,
-    ] = useState(false);
-
-    const [
-        currentIndex,
-        setCurrentIndex,
-    ] = useState(0);
-
     // the LEDs currently scattered on each tent; a tent gets a
     // new random set every time the cursor (or focus) reaches it
     const [
@@ -1839,14 +1827,11 @@ export default function EventsPage() {
         }));
     };
 
-
-
     /* =====================================================
        CLEANUP PENDING TIMERS ON UNMOUNT
     ===================================================== */
 
     useEffect(() => {
-        resetSequence();
         const timers = sequenceTimersRef;
 
         return () => {
@@ -1867,17 +1852,10 @@ export default function EventsPage() {
         setSmokeFading(false);
         setDive(null);
         setDiving(false);
-        setInside(false);
-        setLeavingTent(false);
     };
 
     /* =====================================================
-       OPEN CATEGORY
-
-       wand spins (SPELL_SPIN_MS) -> smoke rises
-       (SMOKE_RISE_MS) -> smoke clears and the camera dives
-       into the tent's doorway (DIVE_DELAY_MS, DIVE_MS) ->
-       the inside of the tent fades in -> modal opens.
+       OPEN CATEGORY -> DIRECT ROLLERCOASTER RIDE
     ===================================================== */
 
     const openCategory = (
@@ -1886,7 +1864,6 @@ export default function EventsPage() {
     ) => {
         clearSequence();
         resetSequence();
-        setSelectedCategory(null);
 
         const rect =
             e.currentTarget.getBoundingClientRect();
@@ -1945,9 +1922,7 @@ export default function EventsPage() {
         const diveMs = wand ? DIVE_MS : 0;
 
         later(() => setSmokeRising(true), smokeAt);
-
         later(() => setSmokeFading(true), clearAt);
-
         later(() => {
             setSmokeRising(false);
             setSmokeFading(false);
@@ -1955,147 +1930,20 @@ export default function EventsPage() {
 
         later(() => setDiving(wand), diveAt);
 
-        // the inside fades in over the last part of the dive
-        later(
-            () => setInside(true),
-            diveAt + diveMs * 0.55
-        );
+        // Synchronize rollercoaster ride colour with this tent and launch directly into rollercoaster!
+        const tentSlug = slugOf(category);
+        const tentSmoke = shadeOf(school, category).smoke;
+        document.documentElement.style.setProperty('--violet', tentSmoke);
+        document.documentElement.style.setProperty('--primary', tentSmoke);
 
         later(() => {
-            setSelectedCategory(category);
-            setCurrentIndex(0);
-            navigate(`/midway-nights?tent=${slugOf(category)}&from=events`);
-        }, diveAt + diveMs + INSIDE_SETTLE_MS);
+            navigate(`/midway-nights?tent=${tentSlug}&school=${school.slug}&color=${encodeURIComponent(tentSmoke)}&return=${encodeURIComponent(`/events/${school.slug}`)}`);
+        }, diveAt + (wand ? diveMs * 0.7 : 0));
     };
-
-    /* =====================================================
-       CLOSE MODAL
-
-       The modal closes immediately. Behind the inside of the
-       tent the camera jumps back out, then the inside fades
-       away (INSIDE_FADE_OUT_MS, matching .tentInteriorLeaving)
-       to reveal the tents again.
-    ===================================================== */
-
-    const closeModal = () => {
-        clearSequence();
-
-        setSelectedCategory(null);
-        setCurrentIndex(0);
-
-        if (inside) {
-            setDiving(false);
-            setLeavingTent(true);
-
-            later(resetSequence, INSIDE_FADE_OUT_MS);
-        } else {
-            resetSequence();
-        }
-    };
-
-    /* =====================================================
-       CURRENT EVENTS
-    ===================================================== */
-
-    const currentEvents: EventData[] =
-        selectedCategory
-            ? eventsData[
-                  selectedCategory
-              ] ?? []
-            : [];
-
-    /* =====================================================
-       NEXT EVENT
-    ===================================================== */
-
-    const handleNext = () => {
-        if (currentEvents.length <= 1) {
-            return;
-        }
-
-        setCurrentIndex((prev) => {
-            if (
-                prev >=
-                currentEvents.length - 1
-            ) {
-                return 0;
-            }
-
-            return prev + 1;
-        });
-    };
-
-    /* =====================================================
-       PREVIOUS EVENT
-    ===================================================== */
-
-    const handlePrev = () => {
-        if (currentEvents.length <= 1) {
-            return;
-        }
-
-        setCurrentIndex((prev) => {
-            if (prev <= 0) {
-                return (
-                    currentEvents.length - 1
-                );
-            }
-
-            return prev - 1;
-        });
-    };
-
-    /* =====================================================
-       KEYBOARD
-    ===================================================== */
-
-    useEffect(() => {
-        if (!selectedCategory) {
-            return;
-        }
-
-        const handleKeyDown = (
-            e: KeyboardEvent
-        ) => {
-            if (e.key === "Escape") {
-                closeModal();
-            }
-
-            if (e.key === "ArrowRight") {
-                handleNext();
-            }
-
-            if (e.key === "ArrowLeft") {
-                handlePrev();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleKeyDown
-        );
-
-        return () => {
-            document.removeEventListener(
-                "keydown",
-                handleKeyDown
-            );
-        };
-    }, [
-        selectedCategory,
-        currentEvents.length,
-    ]);
-
-    /* =====================================================
-       CURRENT EVENT
-    ===================================================== */
-
-    const currentEvent =
-        currentEvents[currentIndex];
 
     const smokeColor =
         spellDepartment
-            ? shadeOf(spellDepartment).smoke
+            ? shadeOf(school, spellDepartment).smoke
             : DEFAULT_SMOKE_COLOR;
 
     return (
@@ -2104,12 +1952,35 @@ export default function EventsPage() {
                 styles.fullPageContainer
             }
         >
-            <Nav />
+            {/* =================================================
+                NAV
+            ================================================= */}
+
+            {!embedded && (
+                <section>
+                    <Nav />
+                </section>
+            )}
+
+            {/* =================================================
+                BACK TO THE TICKETS
+            ================================================= */}
+
+            {!embedded && (
+                <button
+                    type="button"
+                    className={styles.backButton}
+                    onClick={() => navigate("/events")}
+                >
+                    <span aria-hidden="true">◂</span> All Schools
+                </button>
+            )}
+
             {/* =================================================
                 SCENE
 
                 Everything the camera dives into: background,
-                sign and tents.
+                sign and tents (the nav above stays put).
             ================================================= */}
 
             <div
@@ -2130,147 +2001,41 @@ export default function EventsPage() {
                 }
             >
 
+                {/* =================================================
+                    TITLE
+
+                    The EVENTS sign is painted into the background
+                    art, so the heading is only for screen readers.
+                ================================================= */}
+
+                <h1 className={styles.visuallyHidden}>
+                    {school.name} Events
+                </h1>
 
                 {/* =================================================
-                    DEPARTMENT TENTS SCATTERED ACROSS CARNIVAL GROUNDS
-                    Each tent sits firmly on the land with depth, scale,
-                    perspective, and rich ground contact shadows.
+                    DEPARTMENT TENTS
+
+                    Scattered around the carnival ground (spots in
+                    schools.ts). Each tent is a button, so it is
+                    focusable and Enter/Space open it like a click.
                 ================================================= */}
 
-                                {/* =================================================
-                    SPARSE CARNIVAL CROWD
-                    Subtle visitors moving naturally along the pathways
-                    between tents, with realistic perspective & shadows.
-                ================================================= */}
-                <div className={styles.crowdLayer} aria-hidden="true">
-                        {/* Cluster 1: Main foreground path between Civil & EEE (Pair walking up trail) */}
-                        <div className={`${styles.crowdCluster} ${styles.crowdCivilEeePath}`}>
-                            <svg viewBox="0 0 56 74" className={styles.crowdSvg}>
-                                <ellipse cx="18" cy="71" rx="13" ry="2.8" className={styles.crowdShadow} />
-                                <ellipse cx="39" cy="71" rx="12" ry="2.6" className={styles.crowdShadow} />
-                                
-                                {/* Student 1: Burgundy jacket, dark jeans, messenger bag */}
-                                <path d="M18 8 C21 8 23 10 23 13 C23 16.5 21 18.5 18 18.5 C15 18.5 13 16.5 13 13 C13 10 15 8 18 8 Z" fill="#241e30" />
-                                <path d="M12 20 C15 19 21 19 24 20 C26.5 22 27 29 26 39 L23 40 L23 30 L21 30 L20 41 L16 41 L16 30 L14 30 L13 40 L10 39 C9 29 9.5 22 12 20 Z" fill="#6e2634" />
-                                <path d="M12 23 C15 27 19 34 21 37 L23 35 C21 32 17 25 14 22 Z" fill="#423024" />
-                                <path d="M14 41 L13 56 L11 70 L15 70 L16.5 55 L16 41 Z" fill="#1c202a" />
-                                <path d="M17 41 L18.5 54 L21 70 L17.5 70 L16.5 55 L16 41 Z" fill="#1c202a" />
-                                <path d="M17 8 C20.5 8 22.5 10 23 13 C23.5 17 26 24 25.5 32" className={styles.personRimLight} />
-
-                                {/* Student 2: Denim jacket, tan pants, casual stance */}
-                                <path d="M39 7 C42 7 44 9 44 12 C44 15.5 42 17.5 39 17.5 C36 17.5 34 15.5 34 12 C34 9 36 7 39 7 Z" fill="#241e30" />
-                                <path d="M33 19 C36 18 42 18 45 19 C47 21 47.5 28 46.5 38 L43.5 38.5 L43.5 29 L41.5 29 L41 40 L37 40 L37 29 L35 29 L34.5 38.5 L31.5 38 C30.5 28 31 21 33 19 Z" fill="#2a3e5c" />
-                                <path d="M35 40 L34 55 L32 70 L36 70 L37.5 54 L37 40 Z" fill="#4a4235" />
-                                <path d="M38 40 L39.5 53 L42 70 L38.5 70 L37.5 54 L37 40 Z" fill="#4a4235" />
-                                <path d="M38 7 C41.5 7 43.5 9 44 12 C44.5 16 46.5 23 46 31" className={styles.personRimLight} />
-                            </svg>
-                        </div>
-
-                        {/* Cluster 2: Foreground path between EEE & Mechanical (Two friends chatting) */}
-                        <div className={`${styles.crowdCluster} ${styles.crowdEeeMechPath}`}>
-                            <svg viewBox="0 0 56 74" className={styles.crowdSvg}>
-                                <ellipse cx="18" cy="71" rx="13" ry="2.8" className={styles.crowdShadow} />
-                                <ellipse cx="39" cy="71" rx="12" ry="2.6" className={styles.crowdShadow} />
-                                
-                                {/* Student A: Olive jacket, dark jeans */}
-                                <path d="M18 8 C21 8 23 10 23 13 C23 16.5 21 18.5 18 18.5 C15 18.5 13 16.5 13 13 C13 10 15 8 18 8 Z" fill="#241e30" />
-                                <path d="M12 20 C15 19 21 19 24 20 C26.5 22 27 29 26 39 L23 40 L23 30 L21 30 L20 41 L16 41 L16 30 L14 30 L13 40 L10 39 C9 29 9.5 22 12 20 Z" fill="#3d4a36" />
-                                <path d="M14 41 L13 56 L11 70 L15 70 L16.5 55 L16 41 Z" fill="#181c24" />
-                                <path d="M17 41 L18.5 54 L21 70 L17.5 70 L16.5 55 L16 41 Z" fill="#181c24" />
-                                <path d="M17 8 C20.5 8 22.5 10 23 13 C23.5 17 26 24 25.5 32" className={styles.personRimLight} />
-
-                                {/* Student B: Caramel sweater, dark chinos */}
-                                <path d="M39 7 C42 7 44 9 44 12 C44 15.5 42 17.5 39 17.5 C36 17.5 34 15.5 34 12 C34 9 36 7 39 7 Z" fill="#241e30" />
-                                <path d="M33 19 C36 18 42 18 45 19 C47 21 47.5 28 46.5 38 L43.5 38.5 L43.5 29 L41.5 29 L41 40 L37 40 L37 29 L35 29 L34.5 38.5 L31.5 38 C30.5 28 31 21 33 19 Z" fill="#7a5836" />
-                                <path d="M35 40 L34 55 L32 70 L36 70 L37.5 54 L37 40 Z" fill="#20222a" />
-                                <path d="M38 40 L39.5 53 L42 70 L38.5 70 L37.5 54 L37 40 Z" fill="#20222a" />
-                                <path d="M38 7 C41.5 7 43.5 9 44 12 C44.5 16 46.5 23 46 31" className={styles.personRimLight} />
-                            </svg>
-                        </div>
-
-                        {/* Cluster 3: Central main curved promenade between CSE and EEE (Trio of friends) */}
-                        <div className={`${styles.crowdCluster} ${styles.crowdCenterWalkway}`}>
-                            <svg viewBox="0 0 76 76" className={styles.crowdSvg}>
-                                <ellipse cx="17" cy="73" rx="12" ry="2.6" className={styles.crowdShadow} />
-                                <ellipse cx="38" cy="74" rx="14" ry="2.8" className={styles.crowdShadow} />
-                                <ellipse cx="59" cy="73" rx="12" ry="2.6" className={styles.crowdShadow} />
-
-                                {/* Friend 1: Denim jacket */}
-                                <path d="M17 9 C19.5 9 21.5 11 21.5 13.5 C21.5 16.5 19.5 18.5 17 18.5 C14.5 18.5 12.5 16.5 12.5 13.5 C12.5 11 14.5 9 17 9 Z" fill="#241e30" />
-                                <path d="M12 20 C14.5 19 19.5 19 22 20 C24 22 24.5 28.5 23.5 38 L21 39 L21 30 L19 30 L18.5 40 L15.5 40 L15.5 30 L13.5 30 L13 39 L10.5 38 C9.5 28.5 10 22 12 20 Z" fill="#2a3e5c" />
-                                <path d="M14 40 L13 55 L11 71 L15 71 L16 54 L15.5 40 Z" fill="#3a3834" />
-                                <path d="M16.5 40 L18 53 L20 71 L16.5 71 L16 54 L15.5 40 Z" fill="#3a3834" />
-                                <path d="M16 9 C19 9 21 11 21.5 13.5 C22 17 23.5 23.5 23 31" className={styles.personRimLight} />
-
-                                {/* Friend 2: Tall student with backpack & hoodie */}
-                                <path d="M38 5 C41 5 43.5 7.5 43.5 10.5 C43.5 14 41 16 38 16 C35 16 32.5 14 32.5 10.5 C32.5 7.5 35 5 38 5 Z" fill="#241e30" />
-                                <path d="M31 18 C34.5 17 41.5 17 45 18 C47.5 20.5 48 29.5 47 40 L43.5 41 L43.5 30 L41 30 L40.5 42 L36.5 42 L36.5 30 L34 30 L33.5 41 L30 40 C29 29.5 29.5 20.5 31 18 Z" fill="#5c3848" />
-                                <path d="M45 20 C47 23 47.5 28 46.5 33 L44.5 34 Z" fill="#342820" />
-                                <path d="M35 42 L34 57 L32 72 L36.5 72 L38 56 L37.5 42 Z" fill="#1c202a" />
-                                <path d="M38.5 42 L40 55 L42.5 72 L39 72 L38 56 L37.5 42 Z" fill="#1c202a" />
-                                <path d="M37 5 C40.5 5 43 7.5 43.5 11 C44.5 16.5 46.5 24 46 32" className={styles.personRimLight} />
-
-                                {/* Friend 3: Warm tan jacket */}
-                                <path d="M59 8 C61.5 8 63.5 10 63.5 12.5 C63.5 15.5 61.5 17.5 59 17.5 C56.5 17.5 54.5 15.5 54.5 12.5 C54.5 10 56.5 8 59 8 Z" fill="#241e30" />
-                                <path d="M54 19 C56.5 18 61.5 18 64 19 C66 21 66.5 27.5 65.5 37 L63 38 L63 29 L61 29 L60.5 39 L57.5 39 L57.5 29 L55.5 29 L55 38 L52.5 37 C51.5 27.5 52 21 54 19 Z" fill="#6a523a" />
-                                <path d="M56 39 L55 54 L53 71 L57 71 L58 53 L57.5 39 Z" fill="#181c24" />
-                                <path d="M58.5 39 L60 52 L62 71 L58.5 71 L58 53 L57.5 39 Z" fill="#181c24" />
-                                <path d="M58 8 C61 8 63 10 63.5 12.5 C64 16 65.5 22.5 65 30" className={styles.personRimLight} />
-                            </svg>
-                        </div>
-
-                        {/* Cluster 4: Path leading back towards Ferris wheel (Distant pair) */}
-                        <div className={`${styles.crowdCluster} ${styles.crowdFerrisWalkway}`}>
-                            <svg viewBox="0 0 46 72" className={styles.crowdSvg}>
-                                <ellipse cx="15" cy="70" rx="10" ry="2.2" className={styles.crowdShadow} />
-                                <ellipse cx="32" cy="70" rx="10" ry="2.2" className={styles.crowdShadow} />
-                                <path d="M15 10 C17 10 18.5 11.5 18.5 13.5 C18.5 16 17 17.5 15 17.5 C13 17.5 11.5 16 11.5 13.5 C11.5 11.5 13 10 15 10 Z" fill="#241e30" />
-                                <path d="M11 19 C13 18.5 17 18.5 19 19 C20.5 20.5 21 26 20 34 L18 35 L18 27 L16.5 27 L16 36 L13.5 36 L13.5 27 L12 27 L11.5 35 L9.5 34 C8.5 26 9 20.5 11 19 Z" fill="#4a5540" />
-                                <path d="M12.5 36 L11.5 50 L10 69 L13.5 69 L14.5 50 L14 36 Z" fill="#1c202a" />
-                                <path d="M15 36 L16.5 49 L18 69 L15 69 L14.5 50 L14 36 Z" fill="#1c202a" />
-                                <path d="M14 10 C16.5 10 18 11.5 18.5 13.5 C19 16.5 20 22 19.5 28" className={styles.personRimLight} />
-
-                                <path d="M32 9 C34 9 35.5 10.5 35.5 12.5 C35.5 15 34 16.5 32 16.5 C30 16.5 28.5 15 28.5 12.5 C28.5 10.5 30 9 32 9 Z" fill="#241e30" />
-                                <path d="M28 18 C30 17.5 34 17.5 36 18 C37.5 19.5 38 25 37 33 L35 34 L35 26 L33.5 26 L33 35 L30.5 35 L30.5 26 L29 26 L28.5 34 L26.5 33 C25.5 25 26 19.5 28 18 Z" fill="#2a3e5c" />
-                                <path d="M29.5 35 L28.5 49 L27 69 L30.5 69 L31.5 49 L31 35 Z" fill="#363228" />
-                                <path d="M32 35 L33.5 48 L35 69 L32 69 L31.5 49 L31 35 Z" fill="#363228" />
-                                <path d="M31 9 C33.5 9 35 10.5 35.5 12.5 C36 15.5 37 21 36.5 27" className={styles.personRimLight} />
-                            </svg>
-                        </div>
-
-                        {/* Cluster 5: Walkway near AI and CSE */}
-                        <div className={`${styles.crowdCluster} ${styles.crowdAiCseLane}`}>
-                            <svg viewBox="0 0 46 72" className={styles.crowdSvg}>
-                                <ellipse cx="14" cy="70" rx="11" ry="2.4" className={styles.crowdShadow} />
-                                <ellipse cx="33" cy="70" rx="11" ry="2.4" className={styles.crowdShadow} />
-                                <path d="M14 9 C16.5 9 18.5 11 18.5 13.5 C18.5 16.5 16.5 18 14 18 C11.5 18 9.5 16.5 9.5 13.5 C9.5 11 11.5 9 14 9 Z" fill="#241e30" />
-                                <path d="M9 20 C11.5 19 16.5 19 19 20 C21 22 21.5 28 20.5 37 L18 38 L18 29 L16 29 L15.5 39 L12.5 39 L12.5 29 L10.5 29 L10 38 L7.5 37 C6.5 28 7 22 9 20 Z" fill="#6e2634" />
-                                <path d="M11 39 L10 54 L8 69 L12 69 L13 53 L12.5 39 Z" fill="#1c202a" />
-                                <path d="M13.5 39 L15 52 L17 69 L13.5 69 L13 53 L12.5 39 Z" fill="#1c202a" />
-                                <path d="M13 9 C16 9 18 11 18.5 13.5 C19 17 20.5 23 20 30" className={styles.personRimLight} />
-
-                                <path d="M33 8 C35.5 8 37.5 10 37.5 12.5 C37.5 15.5 35.5 17 33 17 C30.5 17 28.5 15.5 28.5 12.5 C28.5 10 30.5 8 33 8 Z" fill="#241e30" />
-                                <path d="M28 19 C30.5 18 35.5 18 38 19 C40 21 40.5 27 39.5 36 L37 37 L37 28 L35 28 L34.5 38 L31.5 38 L31.5 28 L29.5 28 L29 37 L26.5 36 C25.5 27 26 21 28 19 Z" fill="#544a3a" />
-                                <path d="M30 38 L29 53 L27 69 L31 69 L32 52 L31.5 38 Z" fill="#181c24" />
-                                <path d="M32.5 38 L34 51 L36 69 L32.5 69 L32 52 L31.5 38 Z" fill="#181c24" />
-                                <path d="M32 8 C35 8 37 10 37.5 12.5 C38 16 39.5 22 39 29" className={styles.personRimLight} />
-                            </svg>
-                        </div>
-                    </div>
-
-                    <section
+                <section
                     className={styles.tentStage}
                     aria-label="Departments"
                 >
-                    {/* Department tents placed organically across the terrain */}
-                    {departments.map((department) => (
+                    {school.departments.map((department, index) => (
                         <button
                             key={slugOf(department)}
                             type="button"
                             className={styles.tent}
-                            data-department={slugOf(department)}
+                            style={spotStyle(school, index)}
+                            data-department={slugOf(
+                                department
+                            )}
                             data-active={
-                                spellDepartment === department || undefined
+                                spellDepartment ===
+                                    department || undefined
                             }
                             onClick={(e) =>
                                 openCategory(
@@ -2289,14 +2054,19 @@ export default function EventsPage() {
                                 className={styles.tentBody}
                                 style={
                                     {
-                                        "--label-length":
-                                            department.length,
+                                        "--label-length": Math.max(
+                                            ...department
+                                                .split("\n")
+                                                .map((line) => line.length)
+                                        ),
+                                        "--label-lines":
+                                            department.split("\n").length,
                                     } as CSSProperties
                                 }
                             >
                                 <img
                                     src={
-                                        shadeOf(department)
+                                        shadeOf(school, department)
                                             .src
                                     }
                                     alt=""
@@ -2345,39 +2115,6 @@ export default function EventsPage() {
 
             </div>
 
-            {/* =================================================
-                INSIDE THE TENT
-            ================================================= */}
-
-            {inside && spellDepartment && (
-                <div
-                    className={`${styles.tentInterior} ${
-                        leavingTent
-                            ? styles.tentInteriorLeaving
-                            : ""
-                    }`}
-                    data-image={
-                        TENT_INTERIORS[spellDepartment]
-                            ? true
-                            : undefined
-                    }
-                    style={
-                        {
-                            "--interior-color":
-                                shadeOf(spellDepartment)
-                                    .smoke,
-                            ...(TENT_INTERIORS[
-                                spellDepartment
-                            ]
-                                ? {
-                                      backgroundImage: `url(${TENT_INTERIORS[spellDepartment]})`,
-                                  }
-                                : {}),
-                        } as CSSProperties
-                    }
-                    aria-hidden="true"
-                />
-            )}
 
             {/* =================================================
                 SMOKE (rises once the wand has spun)
@@ -2416,271 +2153,24 @@ export default function EventsPage() {
                     color={
                         smokeColor
                     }
-                    fadingOut={leavingTent}
+                    fadingOut={smokeFading}
                 />
             )}
 
+
             {/* =================================================
-                MODAL
+                PRELOADER
             ================================================= */}
 
-            {selectedCategory !== null && (
-                <div
-                    className={
-                        styles.modalOverlay
-                    }
-                    onClick={closeModal}
-                >
-                    <div
-                        className={
-                            currentEvents.length ===
-                            0
-                                ? styles.noEventsModal
-                                : styles.modal
-                        }
-                        onClick={(e) =>
-                            e.stopPropagation()
-                        }
-                    >
-                        {/* =====================================
-                            CLOSE
-                        ===================================== */}
+            {/* =================================================
+                CURTAINS (opening, when arriving through a ticket)
+            ================================================= */}
 
-                        <button
-                            className={
-                                styles.closeButton
-                            }
-                            onClick={
-                                closeModal
-                            }
-                            aria-label="Close"
-                        >
-                            ×
-                        </button>
-
-                        {/* =====================================
-                            NO EVENTS
-                        ===================================== */}
-
-                        {currentEvents.length ===
-                        0 ? (
-                            <div
-                                className={
-                                    styles.noEventsContent
-                                }
-                            >
-                                <h2>
-                                    No Events Found
-                                </h2>
-
-                                <p>
-                                    Alas! There are no{" "}
-                                    {selectedCategory}{" "}
-                                    events to discover
-                                    at the moment.
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                {/* =================================
-                                   EVENT
-                                ================================= */}
-
-                                <div
-                                    className={
-                                        styles.modalContent
-                                    }
-                                >
-                                    {/* =========================
-                                        LEFT
-                                    ========================= */}
-
-                                    <div
-                                        className={
-                                            styles.eventInfo
-                                        }
-                                    >
-                                        <h2>
-                                            {
-                                                currentEvent.name
-                                            }
-                                        </h2>
-
-                                        {currentEvent.description && (
-                                            <p
-                                                className={
-                                                    styles.description
-                                                }
-                                            >
-                                                {
-                                                    currentEvent.description
-                                                }
-                                            </p>
-                                        )}
-
-                                        {/* DETAILS */}
-
-                                        <div
-                                            className={
-                                                styles.eventDetails
-                                            }
-                                        >
-                                            {/* CLUB */}
-
-                                            {currentEvent.club_name && (
-                                                <div
-                                                    className={
-                                                        styles.detail
-                                                    }
-                                                >
-                                                    <span
-                                                        className={
-                                                            styles.icon
-                                                        }
-                                                    >
-                                                        ◆
-                                                    </span>
-
-                                                    <span>
-                                                        {
-                                                            currentEvent.club_name
-                                                        }
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* VENUE */}
-
-                                            {currentEvent.venue && (
-                                                <div
-                                                    className={
-                                                        styles.detail
-                                                    }
-                                                >
-                                                    <span
-                                                        className={
-                                                            styles.icon
-                                                        }
-                                                    >
-                                                        ⌖
-                                                    </span>
-
-                                                    <span>
-                                                        {
-                                                            currentEvent.venue
-                                                        }
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* RULEBOOK */}
-
-                                        {currentEvent.rulebook && (
-                                            <a
-                                                href={
-                                                    "https://docs.google.com/document/d/19yAh7FlGDDVqDHc4ZiUbPv1kwSmhOCYdFTghMzR0UAE/edit?tab=t.0"
-                                                }
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={
-                                                    styles.rulebookButton
-                                                }
-                                            >
-                                                Rulebook
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* =========================
-                                        RIGHT IMAGE
-                                    ========================= */}
-
-                                    <div
-                                        className={
-                                            styles.eventImage
-                                        }
-                                    >
-                                        {currentEvent.image_url ? (
-                                            <img
-                                                src={
-                                                    currentEvent.image_url
-                                                }
-                                                alt={
-                                                    currentEvent.name
-                                                }
-                                            />
-                                        ) : (
-                                            <div
-                                                className={
-                                                    styles.imagePlaceholder
-                                                }
-                                            >
-                                                <span>
-                                                    {
-                                                        currentEvent.name
-                                                    }
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* =================================
-                                    EVENT NAVIGATION
-                                ================================= */}
-
-                                {currentEvents.length >
-                                    1 && (
-                                    <div
-                                        className={
-                                            styles.navigation
-                                        }
-                                    >
-                                        <button
-                                            className={
-                                                styles.navButton
-                                            }
-                                            onClick={
-                                                handlePrev
-                                            }
-                                            aria-label="Previous event"
-                                        >
-                                            ‹
-                                        </button>
-
-                                        <span
-                                            className={
-                                                styles.counter
-                                            }
-                                        >
-                                            {
-                                                currentIndex +
-                                                1
-                                            }
-                                            {" / "}
-                                            {
-                                                currentEvents.length
-                                            }
-                                        </span>
-
-                                        <button
-                                            className={
-                                                styles.navButton
-                                            }
-                                            onClick={
-                                                handleNext
-                                            }
-                                            aria-label="Next event"
-                                        >
-                                            ›
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
+            {!curtainsOpen && (
+                <Curtains
+                    state="opening"
+                    onOpened={() => setCurtainsOpen(true)}
+                />
             )}
 
         </div>

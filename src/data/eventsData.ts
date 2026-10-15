@@ -4,9 +4,9 @@
  */
 
 export interface DepartmentInfo {
-  id: string; // Canonical identifier e.g. "CSE", "AI", "CIVIL"
+  id: string; // Canonical identifier e.g. "CSE", "AI", "CE"
   name: string; // Full display name
-  slug: string; // URL slug e.g. "cse", "ai", "civil"
+  slug: string; // URL slug e.g. "cse", "ai", "ce"
   color: string; // Primary department jewel tone
   secondaryColor: string;
   accentColor: string;
@@ -16,6 +16,9 @@ export interface DepartmentInfo {
 }
 
 export const DEPARTMENTS: DepartmentInfo[] = [
+  /* ==========================================================================
+     SCHOOL: SCHOOL OF ENGINEERING (7 DEPARTMENTS)
+     ========================================================================== */
   {
     id: "AI",
     name: "Artificial Intelligence",
@@ -28,15 +31,15 @@ export const DEPARTMENTS: DepartmentInfo[] = [
     aliases: ["ai", "artificial-intelligence", "aids", "ai-ds", "ai-ml"]
   },
   {
-    id: "CIVIL",
+    id: "CE",
     name: "Civil Engineering",
-    slug: "civil",
+    slug: "ce",
     color: "#50041d",
     secondaryColor: "#edc7d1",
     accentColor: "#ffd37a",
     deepColor: "#26020e",
     highlightColor: "#d77b97",
-    aliases: ["civil", "civil-engineering", "ce", "civ"]
+    aliases: ["ce", "ce-engineering", "civil", "civ"]
   },
   {
     id: "CSE",
@@ -51,7 +54,7 @@ export const DEPARTMENTS: DepartmentInfo[] = [
   },
   {
     id: "ECE",
-    name: "Electronics & Communication",
+    name: "Electronics & Communication Engineering",
     slug: "ece",
     color: "#3b0c3c",
     secondaryColor: "#e0c3e0",
@@ -62,7 +65,7 @@ export const DEPARTMENTS: DepartmentInfo[] = [
   },
   {
     id: "EEE",
-    name: "Electrical & Electronics",
+    name: "Electrical & Electronics Engineering",
     slug: "eee",
     color: "#342875",
     secondaryColor: "#d1cbf2",
@@ -73,7 +76,7 @@ export const DEPARTMENTS: DepartmentInfo[] = [
   },
   {
     id: "EIE",
-    name: "Electronics & Instrumentation",
+    name: "Electronics & Instrumentation Engineering",
     slug: "eie",
     color: "#5a0a2e",
     secondaryColor: "#edc5d6",
@@ -83,15 +86,86 @@ export const DEPARTMENTS: DepartmentInfo[] = [
     aliases: ["eie", "instrumentation", "ei", "electronics-instrumentation"]
   },
   {
-    id: "MECHANICAL",
+    id: "ME",
     name: "Mechanical Engineering",
-    slug: "mechanical",
+    slug: "me",
     color: "#1a2a6b",
     secondaryColor: "#c8d4f2",
     accentColor: "#ffd37a",
     deepColor: "#0b1232",
     highlightColor: "#8ea9ed",
-    aliases: ["mechanical", "mech", "me", "mechanical-engineering"]
+    aliases: ["me", "mech", "mechanical", "me-engineering"]
+  },
+
+  /* ==========================================================================
+     SCHOOL: SCHOOL OF SCIENCE (2 DEPARTMENTS)
+     ========================================================================== */
+  {
+    id: "MCA",
+    name: "Master of Computer Applications",
+    slug: "mca",
+    color: "#50041d",
+    secondaryColor: "#edc7d1",
+    accentColor: "#ffd37a",
+    deepColor: "#26020e",
+    highlightColor: "#d77b97",
+    aliases: ["mca", "computer-applications"]
+  },
+  {
+    id: "BSC",
+    name: "Bachelor of Science",
+    slug: "bsc",
+    color: "#1a2a6b",
+    secondaryColor: "#c8d4f2",
+    accentColor: "#ffd37a",
+    deepColor: "#0b1232",
+    highlightColor: "#8ea9ed",
+    aliases: ["bsc", "science", "b-sc"]
+  },
+
+  /* ==========================================================================
+     SCHOOL: SCHOOL OF MANAGEMENT (1 DEPARTMENT)
+     ========================================================================== */
+  {
+    id: "BUSINESS ADMINISTRATION",
+    name: "Business Administration",
+    slug: "business-administration",
+    color: "#50041d",
+    secondaryColor: "#edc7d1",
+    accentColor: "#ffd37a",
+    deepColor: "#26020e",
+    highlightColor: "#d77b97",
+    aliases: ["business-administration", "businessadministration", "management", "bba", "mba", "business-admin"]
+  },
+
+  /* ==========================================================================
+     SCHOOL: SCHOOL OF ARTS & COMMERCE (1 DEPARTMENT)
+     ========================================================================== */
+  {
+    id: "ARTS AND COMMERCE",
+    name: "Arts & Commerce",
+    slug: "arts-and-commerce",
+    color: "#5a0a2e",
+    secondaryColor: "#edc5d6",
+    accentColor: "#ffd37a",
+    deepColor: "#280515",
+    highlightColor: "#e28bb1",
+    aliases: ["arts-and-commerce", "artsandcommerce", "arts-commerce", "commerce", "arts", "bcom", "ba"]
+  },
+
+  /* ==========================================================================
+     SCHOOL: SCHOOL OF LAW (1 DEPARTMENT)
+     ========================================================================== */
+  {
+    id: "LAW",
+    name: "School of Law",
+    slug: "law",
+    color: "#50041d",
+    secondaryColor: "#edc7d1",
+    accentColor: "#ffd37a",
+    deepColor: "#26020e",
+    highlightColor: "#d77b97",
+    aliases: ["law", "llb", "legal", "school-of-law"]
   }
 ];
 
@@ -144,7 +218,17 @@ export function getDepartmentInfo(input: string | null | undefined): DepartmentI
  * Each department hosts real Technical and Non-Technical events with distinct schedules and descriptions.
  */
 export const CANONICAL_EVENTS: CanonicalEvent[] = [
-  /* ---------------- AI DEPARTMENT ---------------- */
+  /* ==========================================================================
+     ==========================================================================
+     SCHOOL: SCHOOL OF ENGINEERING
+     Departments: AI, CE, CSE, ECE, EEE, EIE, ME
+     ==========================================================================
+     ========================================================================== */
+
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: AI (Artificial Intelligence)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "ai-neural-hack",
     name: "Neural Sprint Hackathon",
@@ -236,7 +320,10 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- CSE DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: CSE (Computer Science & Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "cse-codesprint",
     name: "CodeSprint 24-Hr Hackathon",
@@ -328,12 +415,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- CIVIL DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: CE (Civil Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
-    id: "civil-bridge-craft",
+    id: "ce-bridge-craft",
     name: "Truss Titan: Bridge Craft",
     title: "Truss Titan: Bridge Craft",
-    departmentId: "CIVIL",
+    departmentId: "CE",
     category: "Technical",
     description: "Design and build a lightweight balsa-wood truss bridge, then test its ultimate load capacity on hydraulic presses.",
     blurb: "Design and build a lightweight balsa-wood truss bridge, then test its ultimate load capacity on hydraulic presses.",
@@ -343,15 +433,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     venue: "Structures Bay",
     price: "₹149",
     club_name: "ASCE Chapter",
-    registrationUrl: "#/register/civil-bridge-craft",
-    registerUrl: "#/register/civil-bridge-craft",
+    registrationUrl: "#/register/ce-bridge-craft",
+    registerUrl: "#/register/ce-bridge-craft",
     image_url: null
   },
   {
-    id: "civil-smart-city",
+    id: "ce-smart-city",
     name: "Smart City & BIM Expo",
     title: "Smart City & BIM Expo",
-    departmentId: "CIVIL",
+    departmentId: "CE",
     category: "Technical",
     description: "3D architectural planning and sustainable infrastructure designs using modern BIM and GIS software.",
     blurb: "3D architectural planning and sustainable infrastructure designs using modern BIM and GIS software.",
@@ -361,15 +451,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     venue: "CAD Laboratory",
     price: "Free entry",
     club_name: "Urban Planners",
-    registrationUrl: "#/register/civil-smart-city",
-    registerUrl: "#/register/civil-smart-city",
+    registrationUrl: "#/register/ce-smart-city",
+    registerUrl: "#/register/ce-smart-city",
     image_url: null
   },
   {
-    id: "civil-survey-hunt",
+    id: "ce-survey-hunt",
     name: "Theodolite Geocache Hunt",
     title: "Theodolite Geocache Hunt",
-    departmentId: "CIVIL",
+    departmentId: "CE",
     category: "Technical",
     description: "Use precision total stations and optical levels to decipher surveying coordinates and uncover hidden markers.",
     blurb: "Use precision total stations and optical levels to decipher surveying coordinates and uncover hidden markers.",
@@ -379,15 +469,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     venue: "Carnival Fairgrounds",
     price: "₹99",
     club_name: "Surveying Guild",
-    registrationUrl: "#/register/civil-survey-hunt",
-    registerUrl: "#/register/civil-survey-hunt",
+    registrationUrl: "#/register/ce-survey-hunt",
+    registerUrl: "#/register/ce-survey-hunt",
     image_url: null
   },
   {
-    id: "civil-concrete-bowling",
+    id: "ce-concrete-bowling",
     name: "Concrete Bowling Derby",
     title: "Concrete Bowling Derby",
-    departmentId: "CIVIL",
+    departmentId: "CE",
     category: "Non-Technical",
     description: "Cast customized lightweight concrete spheres and bowl them down a grassy obstacle lane!",
     blurb: "Cast customized lightweight concrete spheres and bowl them down a grassy obstacle lane!",
@@ -397,15 +487,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     venue: "Lawn Alley",
     price: "₹99",
     club_name: "Concrete Enthusiasts",
-    registrationUrl: "#/register/civil-concrete-bowling",
-    registerUrl: "#/register/civil-concrete-bowling",
+    registrationUrl: "#/register/ce-concrete-bowling",
+    registerUrl: "#/register/ce-concrete-bowling",
     image_url: null
   },
   {
-    id: "civil-tower-stack",
+    id: "ce-tower-stack",
     name: "Seismic Tower Shake-Off",
     title: "Seismic Tower Shake-Off",
-    departmentId: "CIVIL",
+    departmentId: "CE",
     category: "Non-Technical",
     description: "Construct towering earthquake-resistant skyscrapers from spaghetti and clay, then withstand the shake table!",
     blurb: "Construct towering earthquake-resistant skyscrapers from spaghetti and clay, then withstand the shake table!",
@@ -415,12 +505,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     venue: "Dynamics Rig",
     price: "₹149",
     club_name: "Structural Dynamics",
-    registrationUrl: "#/register/civil-tower-stack",
-    registerUrl: "#/register/civil-tower-stack",
+    registrationUrl: "#/register/ce-tower-stack",
+    registerUrl: "#/register/ce-tower-stack",
     image_url: null
   },
 
-  /* ---------------- ECE DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: ECE (Electronics & Communication Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "ece-silicon-sprint",
     name: "Silicon Circuit Sprint",
@@ -512,7 +605,10 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- EEE DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: EEE (Electrical & Electronics Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "eee-tesla-expo",
     name: "Tesla Coil Musical Showcase",
@@ -604,7 +700,10 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- EIE DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: EIE (Electronics & Instrumentation Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "eie-sensor-fusion",
     name: "Sensor Fusion & Telemetry",
@@ -696,12 +795,15 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- MECHANICAL DEPARTMENT ---------------- */
+  /* --------------------------------------------------------------------------
+     [School of Engineering] DEPARTMENT: ME (Mechanical Engineering)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
   {
     id: "mech-cadathon",
     name: "CAD-A-Thon 3D Assembly",
     title: "CAD-A-Thon 3D Assembly",
-    departmentId: "MECHANICAL",
+    departmentId: "ME",
     category: "Technical",
     description: "Rapid 3D modeling, parametric assembly, and finite element stress analysis under live design briefs.",
     blurb: "Rapid 3D modeling, parametric assembly, and finite element stress analysis under live design briefs.",
@@ -719,7 +821,7 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     id: "mech-rc-nitro",
     name: "Nitro RC Drag Championship",
     title: "Nitro RC Drag Championship",
-    departmentId: "MECHANICAL",
+    departmentId: "ME",
     category: "Technical",
     description: "Scale nitro and brushless RC cars battle for the fastest quarter-second acceleration down the straightaway.",
     blurb: "Scale nitro and brushless RC cars battle for the fastest quarter-second acceleration down the straightaway.",
@@ -737,10 +839,10 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     id: "mech-junkyard-wars",
     name: "Junkyard Contraption Wars",
     title: "Junkyard Contraption Wars",
-    departmentId: "MECHANICAL",
+    departmentId: "ME",
     category: "Technical",
-    description: "Build working mechanical siege catapults and projectile launchers out of scrap metal, springs, and gears.",
-    blurb: "Build working mechanical siege catapults and projectile launchers out of scrap metal, springs, and gears.",
+    description: "Build working me siege catapults and projectile launchers out of scrap metal, springs, and gears.",
+    blurb: "Build working me siege catapults and projectile launchers out of scrap metal, springs, and gears.",
     details: "Materials assigned via blind draft. Catapults evaluated on maximum range and target accuracy.",
     date: "Sat 7 Nov",
     time: "4:00 PM",
@@ -755,7 +857,7 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     id: "mech-hydro-rocket",
     name: "Water Rocket Launch Derby",
     title: "Water Rocket Launch Derby",
-    departmentId: "MECHANICAL",
+    departmentId: "ME",
     category: "Non-Technical",
     description: "Pressurized water bottle rocketry: optimize aerodynamics, fin stabilization, and parachute recovery systems.",
     blurb: "Pressurized water bottle rocketry: optimize aerodynamics, fin stabilization, and parachute recovery systems.",
@@ -773,7 +875,7 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     id: "mech-lathe-showdown",
     name: "Machinist Precision Duel",
     title: "Machinist Precision Duel",
-    departmentId: "MECHANICAL",
+    departmentId: "ME",
     category: "Technical",
     description: "Manual turning and milling precision duel producing exact stepped shafts to micron tolerances.",
     blurb: "Manual turning and milling precision duel producing exact stepped shafts to micron tolerances.",
@@ -788,7 +890,514 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
     image_url: null
   },
 
-  /* ---------------- INTER-DEPARTMENT SHARED EVENT ---------------- */
+  /* ==========================================================================
+     ==========================================================================
+     SCHOOL: SCHOOL OF SCIENCE
+     Departments: MCA, BSC
+     ==========================================================================
+     ========================================================================== */
+
+  /* --------------------------------------------------------------------------
+     [School of Science] DEPARTMENT: MCA (Master of Computer Applications)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
+  {
+    id: "mca-cloud-hack",
+    name: "CloudScale Architecture Sprint",
+    title: "CloudScale Architecture Sprint",
+    departmentId: "MCA",
+    category: "Technical",
+    description: "Design and deploy resilient, fault-tolerant cloud microservices under timed chaos engineering scenarios.",
+    blurb: "Design and deploy resilient, fault-tolerant cloud microservices under timed chaos engineering scenarios.",
+    details: "Teams will be evaluated on latency, high availability, container orchestration, and real-time failure recovery.",
+    date: "Fri 6 Nov",
+    time: "11:00 AM",
+    venue: "Science Computing Lab 1",
+    price: "Free entry",
+    club_name: "Cloud & DevSecOps Guild",
+    registrationUrl: "#/register/mca-cloud-hack",
+    registerUrl: "#/register/mca-cloud-hack",
+    image_url: null
+  },
+  {
+    id: "mca-fullstack-derby",
+    name: "Full-Stack Web App Derby",
+    title: "Full-Stack Web App Derby",
+    departmentId: "MCA",
+    category: "Technical",
+    description: "Build an interactive, database-driven enterprise application from scratch in 6 fast-paced hours.",
+    blurb: "Build an interactive, database-driven enterprise application from scratch in 6 fast-paced hours.",
+    details: "APIs and problem statements revealed at start. Judged on responsive UI, clean backend APIs, and database performance.",
+    date: "Sat 7 Nov",
+    time: "1:30 PM",
+    venue: "MCA Innovation Center",
+    price: "₹149",
+    club_name: "WebCrafters",
+    registrationUrl: "#/register/mca-fullstack-derby",
+    registerUrl: "#/register/mca-fullstack-derby",
+    image_url: null
+  },
+  {
+    id: "mca-sql-olympiad",
+    name: "SQL & Query Optimization Olympiad",
+    title: "SQL & Query Optimization Olympiad",
+    departmentId: "MCA",
+    category: "Technical",
+    description: "Tackle high-volume database query tuning, complex stored procedures, and sub-second analytics.",
+    blurb: "Tackle high-volume database query tuning, complex stored procedures, and sub-second analytics.",
+    details: "Contestants solve progressive relational schema challenges. Benchmarked on query execution time and index efficiency.",
+    date: "Sat 7 Nov",
+    time: "4:00 PM",
+    venue: "Lab Terminal 3",
+    price: "₹99",
+    club_name: "Data Systems Forum",
+    registrationUrl: "#/register/mca-sql-olympiad",
+    registerUrl: "#/register/mca-sql-olympiad",
+    image_url: null
+  },
+  {
+    id: "mca-cyber-hunt",
+    name: "Cyber Security CTF & Bug Bounty",
+    title: "Cyber Security CTF & Bug Bounty",
+    departmentId: "MCA",
+    category: "Non-Technical",
+    description: "Hands-on jeopardy-style Capture The Flag challenge uncovering crypto flaws, reverse engineering binaries, and web exploits.",
+    blurb: "Hands-on jeopardy-style Capture The Flag challenge uncovering crypto flaws, reverse engineering binaries, and web exploits.",
+    details: "Beginner and advanced tiers. Virtual sandbox environment provided. Flag submission portal active for 4 hours.",
+    date: "Sun 8 Nov",
+    time: "10:30 AM",
+    venue: "Cyber Defense Arena",
+    price: "₹199",
+    club_name: "WhiteHat Ethical Hackers",
+    registrationUrl: "#/register/mca-cyber-hunt",
+    registerUrl: "#/register/mca-cyber-hunt",
+    image_url: null
+  },
+  {
+    id: "mca-uiux-sprint",
+    name: "Futuristic UI/UX Experience Derby",
+    title: "Futuristic UI/UX Experience Derby",
+    departmentId: "MCA",
+    category: "Non-Technical",
+    description: "Design visionary human-computer interfaces, motion interactions, and micro-animations for next-generation apps.",
+    blurb: "Design visionary human-computer interfaces, motion interactions, and micro-animations for next-generation apps.",
+    details: "Figma/Penpot prototyping challenge. Evaluated on usability, accessibility, aesthetics, and creative design systems.",
+    date: "Sun 8 Nov",
+    time: "2:00 PM",
+    venue: "Media Studio 2",
+    price: "Free entry",
+    club_name: "Product Design Syndicate",
+    registrationUrl: "#/register/mca-uiux-sprint",
+    registerUrl: "#/register/mca-uiux-sprint",
+    image_url: null
+  },
+
+  /* --------------------------------------------------------------------------
+     [School of Science] DEPARTMENT: BSC (Bachelor of Science)
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
+  {
+    id: "bsc-data-bowl",
+    name: "Data Science & Predictive Modeling Bowl",
+    title: "Data Science & Predictive Modeling Bowl",
+    departmentId: "BSC",
+    category: "Technical",
+    description: "Analyze vast scientific datasets, build regression models, and visualize statistical correlations.",
+    blurb: "Analyze vast scientific datasets, build regression models, and visualize statistical correlations.",
+    details: "Datasets spanning bioinformatics, climate change, and astrophysics. Jupyter notebook evaluation format.",
+    date: "Fri 6 Nov",
+    time: "1:00 PM",
+    venue: "Science Complex Hall A",
+    price: "Free entry",
+    club_name: "Analytics Circle",
+    registrationUrl: "#/register/bsc-data-bowl",
+    registerUrl: "#/register/bsc-data-bowl",
+    image_url: null
+  },
+  {
+    id: "bsc-math-arena",
+    name: "Pure & Applied Math Olympiad",
+    title: "Pure & Applied Math Olympiad",
+    departmentId: "BSC",
+    category: "Technical",
+    description: "High-level problem solving spanning linear algebra, probability, calculus, and discrete mathematics.",
+    blurb: "High-level problem solving spanning linear algebra, probability, calculus, and discrete mathematics.",
+    details: "Individual competition with speed round and proof derivation round. Formula sheets and scratch paper provided.",
+    date: "Sat 7 Nov",
+    time: "10:00 AM",
+    venue: "Ramanujan Lecture Hall",
+    price: "₹99",
+    club_name: "Mathematics Society",
+    registrationUrl: "#/register/bsc-math-arena",
+    registerUrl: "#/register/bsc-math-arena",
+    image_url: null
+  },
+  {
+    id: "bsc-science-quiz",
+    name: "Quantum & Cosmos Mega Quiz",
+    title: "Quantum & Cosmos Mega Quiz",
+    departmentId: "BSC",
+    category: "Non-Technical",
+    description: "Buzzer-round science extravaganza covering astrophysics, chemistry curiosities, and discoveries that changed the world.",
+    blurb: "Buzzer-round science extravaganza covering astrophysics, chemistry curiosities, and discoveries that changed the world.",
+    details: "Teams of 2. Preliminary written quiz selects top 6 finalist teams for live stage buzzer rounds.",
+    date: "Sat 7 Nov",
+    time: "3:30 PM",
+    venue: "Main Science Auditorium",
+    price: "₹149",
+    club_name: "Quizzing Guild",
+    registrationUrl: "#/register/bsc-science-quiz",
+    registerUrl: "#/register/bsc-science-quiz",
+    image_url: null
+  },
+  {
+    id: "bsc-poster-symposium",
+    name: "Frontiers of Science Poster Symposium",
+    title: "Frontiers of Science Poster Symposium",
+    departmentId: "BSC",
+    category: "Exhibition",
+    description: "Undergraduate research poster presentations highlighting breakthroughs in nanomaterials, renewable energy, and biochemistry.",
+    blurb: "Undergraduate research poster presentations highlighting breakthroughs in nanomaterials, renewable energy, and biochemistry.",
+    details: "Live panel of judges critiques poster clarity, experimental rigor, and Q&A defense.",
+    date: "Sun 8 Nov",
+    time: "11:00 AM",
+    venue: "Science Pavilion Concourse",
+    price: "Free entry",
+    club_name: "Research & Discovery Forum",
+    registrationUrl: "#/register/bsc-poster-symposium",
+    registerUrl: "#/register/bsc-poster-symposium",
+    image_url: null
+  },
+  {
+    id: "bsc-lab-expo",
+    name: "Chemical Wonders & Physics Magic Expo",
+    title: "Chemical Wonders & Physics Magic Expo",
+    departmentId: "BSC",
+    category: "Exhibition",
+    description: "Spectacular visual demonstrations of luminescence, liquid nitrogen levitation, and non-Newtonian fluid dynamics.",
+    blurb: "Spectacular visual demonstrations of luminescence, liquid nitrogen levitation, and non-Newtonian fluid dynamics.",
+    details: "Open-floor interactive walk-through demonstrations suitable for all students and visitors.",
+    date: "Sun 8 Nov",
+    time: "4:00 PM",
+    venue: "Discovery Courtyard",
+    price: "Free entry",
+    club_name: "Experimental Sciences Club",
+    registrationUrl: "#/register/bsc-lab-expo",
+    registerUrl: "#/register/bsc-lab-expo",
+    image_url: null
+  },
+
+  /* ==========================================================================
+     ==========================================================================
+     SCHOOL: SCHOOL OF MANAGEMENT
+     Department: BUSINESS ADMINISTRATION
+     ==========================================================================
+     ========================================================================== */
+
+  /* --------------------------------------------------------------------------
+     [School of Management] DEPARTMENT: BUSINESS ADMINISTRATION
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
+  {
+    id: "mgmt-pitch-tank",
+    name: "Venture Capital Pitch Tank",
+    title: "Venture Capital Pitch Tank",
+    departmentId: "BUSINESS ADMINISTRATION",
+    category: "Technical",
+    description: "Aspiring student founders present disruptive business models and financial projections before angel investors and venture capitalists.",
+    blurb: "Aspiring student founders present disruptive business models and financial projections before angel investors and venture capitalists.",
+    details: "5-minute pitch followed by 3-minute hard Q&A by industry mentors. Winner secures seed grant advisory support.",
+    date: "Fri 6 Nov",
+    time: "2:00 PM",
+    venue: "Executive Boardroom",
+    price: "₹199",
+    club_name: "E-Cell & Startup Incubation",
+    registrationUrl: "#/register/mgmt-pitch-tank",
+    registerUrl: "#/register/mgmt-pitch-tank",
+    image_url: null
+  },
+  {
+    id: "mgmt-mock-stock",
+    name: "Wall Street Mock Stock Exchange",
+    title: "Wall Street Mock Stock Exchange",
+    departmentId: "BUSINESS ADMINISTRATION",
+    category: "Non-Technical",
+    description: "Fast-moving live trading floor simulation with real-time news flashes, market crashes, and arbitrage opportunities.",
+    blurb: "Fast-moving live trading floor simulation with real-time news flashes, market crashes, and arbitrage opportunities.",
+    details: "Teams trade with ₹10,00,000 virtual capital across 4 trading quarters. Highest portfolio value wins.",
+    date: "Sat 7 Nov",
+    time: "10:30 AM",
+    venue: "Management Atrium",
+    price: "₹149",
+    club_name: "Finance & Investment Society",
+    registrationUrl: "#/register/mgmt-mock-stock",
+    registerUrl: "#/register/mgmt-mock-stock",
+    image_url: null
+  },
+  {
+    id: "mgmt-brand-blitz",
+    name: "Brand Strategy & Ad Re-Creation Blitz",
+    title: "Brand Strategy & Ad Re-Creation Blitz",
+    departmentId: "BUSINESS ADMINISTRATION",
+    category: "Non-Technical",
+    description: "Teams receive an unconventional or defunct consumer brand and build a modern viral relaunch campaign within 3 hours.",
+    blurb: "Teams receive an unconventional or defunct consumer brand and build a modern viral relaunch campaign within 3 hours.",
+    details: "Judged on taglines, commercial script, social media strategy, and billboard visual layout.",
+    date: "Sat 7 Nov",
+    time: "3:00 PM",
+    venue: "Marketing Hub Seminar Hall",
+    price: "₹99",
+    club_name: "Marketing Mavericks",
+    registrationUrl: "#/register/mgmt-brand-blitz",
+    registerUrl: "#/register/mgmt-brand-blitz",
+    image_url: null
+  },
+  {
+    id: "mgmt-case-study",
+    name: "Global Corporate Strategy Challenge",
+    title: "Global Corporate Strategy Challenge",
+    departmentId: "BUSINESS ADMINISTRATION",
+    category: "Technical",
+    description: "Analyze a real-world multi-national corporate turnaround case and formulate market expansion strategies.",
+    blurb: "Analyze a real-world multi-national corporate turnaround case and formulate market expansion strategies.",
+    details: "Harvard-style business case study. 2 hours preparation, 10-minute slide deck presentation to executive jury.",
+    date: "Sun 8 Nov",
+    time: "10:00 AM",
+    venue: "Seminar Hall 1",
+    price: "₹199",
+    club_name: "Consulting & Strategy Club",
+    registrationUrl: "#/register/mgmt-case-study",
+    registerUrl: "#/register/mgmt-case-study",
+    image_url: null
+  },
+  {
+    id: "mgmt-crisis-sim",
+    name: "Corporate PR & Crisis Management Simulation",
+    title: "Corporate PR & Crisis Management Simulation",
+    departmentId: "BUSINESS ADMINISTRATION",
+    category: "Technical",
+    description: "Navigate a fast-breaking PR catastrophe, regulatory audit, and hostile social media onslaught in real-time.",
+    blurb: "Navigate a fast-breaking PR catastrophe, regulatory audit, and hostile social media onslaught in real-time.",
+    details: "Teams roleplay executive leadership holding simulated press conferences under intense media cross-examination.",
+    date: "Sun 8 Nov",
+    time: "2:30 PM",
+    venue: "Conference Hall B",
+    price: "Free entry",
+    club_name: "Corporate Relations Council",
+    registrationUrl: "#/register/mgmt-crisis-sim",
+    registerUrl: "#/register/mgmt-crisis-sim",
+    image_url: null
+  },
+
+  /* ==========================================================================
+     ==========================================================================
+     SCHOOL: SCHOOL OF ARTS & COMMERCE
+     Department: ARTS AND COMMERCE
+     ==========================================================================
+     ========================================================================== */
+
+  /* --------------------------------------------------------------------------
+     [School of Arts & Commerce] DEPARTMENT: ARTS AND COMMERCE
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
+  {
+    id: "ac-forensic-audit",
+    name: "Forensic Accounting & Financial Crime Hunt",
+    title: "Forensic Accounting & Financial Crime Hunt",
+    departmentId: "ARTS AND COMMERCE",
+    category: "Technical",
+    description: "Unravel doctored balance sheets, hidden shell companies, and fraudulent ledger entries in a simulated corporate audit.",
+    blurb: "Unravel doctored balance sheets, hidden shell companies, and fraudulent ledger entries in a simulated corporate audit.",
+    details: "Teams receive financial statements, bank vouchers, and email logs to trace money laundering operations.",
+    date: "Fri 6 Nov",
+    time: "1:30 PM",
+    venue: "Commerce Wing Lab A",
+    price: "₹149",
+    club_name: "Chartered Accountants Students Club",
+    registrationUrl: "#/register/ac-forensic-audit",
+    registerUrl: "#/register/ac-forensic-audit",
+    image_url: null
+  },
+  {
+    id: "ac-debate-championship",
+    name: "National Parliamentary Debate Championship",
+    title: "National Parliamentary Debate Championship",
+    departmentId: "ARTS AND COMMERCE",
+    category: "Non-Technical",
+    description: "3-on-3 Asian parliamentary debates over economic policy, international diplomacy, and societal dilemmas.",
+    blurb: "3-on-3 Asian parliamentary debates over economic policy, international diplomacy, and societal dilemmas.",
+    details: "Adjudicated by certified debate judges. Strict 7-minute constructive speeches and point-of-information protocols.",
+    date: "Sat 7 Nov",
+    time: "11:00 AM",
+    venue: "Humanities Auditorium",
+    price: "Free entry",
+    club_name: "Literary & Debating Society",
+    registrationUrl: "#/register/ac-debate-championship",
+    registerUrl: "#/register/ac-debate-championship",
+    image_url: null
+  },
+  {
+    id: "ac-creative-arts-expo",
+    name: "Canvas & Cultural Aesthetics Exhibition",
+    title: "Canvas & Cultural Aesthetics Exhibition",
+    departmentId: "ARTS AND COMMERCE",
+    category: "Exhibition",
+    description: "Fine arts showcase highlighting traditional Indian folk paintings, contemporary oils, and sustainable craft sculptures.",
+    blurb: "Fine arts showcase highlighting traditional Indian folk paintings, contemporary oils, and sustainable craft sculptures.",
+    details: "Live portrait painting stations, ceramic pottery wheels, and student artwork auction throughout the day.",
+    date: "Sat 7 Nov",
+    time: "2:00 PM",
+    venue: "Fine Arts Gallery",
+    price: "Free entry",
+    club_name: "Visual Arts Collective",
+    registrationUrl: "#/register/ac-creative-arts-expo",
+    registerUrl: "#/register/ac-creative-arts-expo",
+    image_url: null
+  },
+  {
+    id: "ac-young-entrepreneur",
+    name: "Young Tycoon Bazaar & Trade Challenge",
+    title: "Young Tycoon Bazaar & Trade Challenge",
+    departmentId: "ARTS AND COMMERCE",
+    category: "Non-Technical",
+    description: "Teams receive a seed capital of ₹1,00,000 virtual credit to run simulated on-campus stalls to generate maximum profit.",
+    blurb: "Teams receive a seed capital of ₹1,00,000 virtual credit to run simulated on-campus stalls to generate maximum profit.",
+    details: "Evaluated on inventory turnover, net return on capital, customer service, and marketing creativity.",
+    date: "Sun 8 Nov",
+    time: "11:30 AM",
+    venue: "Carnival Promenade",
+    price: "₹199",
+    club_name: "Commerce Guild",
+    registrationUrl: "#/register/ac-young-entrepreneur",
+    registerUrl: "#/register/ac-young-entrepreneur",
+    image_url: null
+  },
+  {
+    id: "ac-fintech-hack",
+    name: "Fintech & Banking Solutions Challenge",
+    title: "Fintech & Banking Solutions Challenge",
+    departmentId: "ARTS AND COMMERCE",
+    category: "Technical",
+    description: "Propose next-generation financial inclusion, UPI payment workflows, and micro-investment tools for rural economies.",
+    blurb: "Propose next-generation financial inclusion, UPI payment workflows, and micro-investment tools for rural economies.",
+    details: "Teams present business viability blueprints and interactive UI mockups before senior banking professionals.",
+    date: "Sun 8 Nov",
+    time: "3:30 PM",
+    venue: "Commerce Seminar Room 2",
+    price: "₹99",
+    club_name: "Economics & Banking Cell",
+    registrationUrl: "#/register/ac-fintech-hack",
+    registerUrl: "#/register/ac-fintech-hack",
+    image_url: null
+  },
+
+  /* ==========================================================================
+     ==========================================================================
+     SCHOOL: SCHOOL OF LAW
+     Department: LAW
+     ==========================================================================
+     ========================================================================== */
+
+  /* --------------------------------------------------------------------------
+     [School of Law] DEPARTMENT: LAW
+     Events / Flash Cards: 5 Distinct Stalls
+     -------------------------------------------------------------------------- */
+  {
+    id: "law-moot-court",
+    name: "National Moot Court Competition",
+    title: "National Moot Court Competition",
+    departmentId: "LAW",
+    category: "Technical",
+    description: "Arguing constitutional validity, fundamental rights, and appellate jurisprudence before sitting high court judges.",
+    blurb: "Arguing constitutional validity, fundamental rights, and appellate jurisprudence before sitting high court judges.",
+    details: "Memorial submissions and oral rounds. Strict Bluebook citation standards and judicial decorum observed.",
+    date: "Fri 6 Nov",
+    time: "10:00 AM",
+    venue: "Moot Court Hall",
+    price: "Free entry",
+    club_name: "Moot Court Committee",
+    registrationUrl: "#/register/law-moot-court",
+    registerUrl: "#/register/law-moot-court",
+    image_url: null
+  },
+  {
+    id: "law-legal-drafting",
+    name: "Contract & Statutory Clause Drafting",
+    title: "Contract & Statutory Clause Drafting",
+    departmentId: "LAW",
+    category: "Technical",
+    description: "Draft airtight international commercial agreements, arbitration clauses, and indemnity guarantees under pressure.",
+    blurb: "Draft airtight international commercial agreements, arbitration clauses, and indemnity guarantees under pressure.",
+    details: "Challenging scenarios involving cross-border mergers, intellectual property licensing, and dispute resolution.",
+    date: "Sat 7 Nov",
+    time: "11:30 AM",
+    venue: "Law Library Seminar Room",
+    price: "₹99",
+    club_name: "Corporate Law Society",
+    registrationUrl: "#/register/law-legal-drafting",
+    registerUrl: "#/register/law-legal-drafting",
+    image_url: null
+  },
+  {
+    id: "law-cyber-conclave",
+    name: "Cyber Law & AI Ethics Conclave",
+    title: "Cyber Law & AI Ethics Conclave",
+    departmentId: "LAW",
+    category: "Technical",
+    description: "Deliberate cross-jurisdictional cyber forensics, data privacy legislation, and artificial intelligence liability frameworks.",
+    blurb: "Deliberate cross-jurisdictional cyber forensics, data privacy legislation, and artificial intelligence liability frameworks.",
+    details: "Paper presentations, expert keynote addresses, and delegate Q&A on digital personal data protection acts.",
+    date: "Sat 7 Nov",
+    time: "3:00 PM",
+    venue: "Law Main Auditorium",
+    price: "Free entry",
+    club_name: "TechLaw & Cyber Cell",
+    registrationUrl: "#/register/law-cyber-conclave",
+    registerUrl: "#/register/law-cyber-conclave",
+    image_url: null
+  },
+  {
+    id: "law-mock-trial",
+    name: "Criminal Mock Trial & Deliberation",
+    title: "Criminal Mock Trial & Deliberation",
+    departmentId: "LAW",
+    category: "Non-Technical",
+    description: "Prosecution vs Defense in a high-stakes homicide trial complete with witness cross-examinations and jury deliberation.",
+    blurb: "Prosecution vs Defense in a high-stakes homicide trial complete with witness cross-examinations and jury deliberation.",
+    details: "Witness depositions, evidence exhibits, and closing arguments before an open courtroom gallery.",
+    date: "Sun 8 Nov",
+    time: "11:00 AM",
+    venue: "Trial Court Arena",
+    price: "₹149",
+    club_name: "Advocacy & Litigation Club",
+    registrationUrl: "#/register/law-mock-trial",
+    registerUrl: "#/register/law-mock-trial",
+    image_url: null
+  },
+  {
+    id: "law-legal-eagle-quiz",
+    name: "The Legal Eagle Jurisprudence Quiz",
+    title: "The Legal Eagle Jurisprudence Quiz",
+    departmentId: "LAW",
+    category: "Non-Technical",
+    description: "Rapid-fire testing on landmark constitutional judgments, legal maxims, international treaties, and historical cases.",
+    blurb: "Rapid-fire testing on landmark constitutional judgments, legal maxims, international treaties, and historical cases.",
+    details: "Open to all students across all schools. 4 rounds including audio-visual clues and legal trivia.",
+    date: "Sun 8 Nov",
+    time: "2:30 PM",
+    venue: "Jurisprudence Lecture Hall",
+    price: "₹99",
+    club_name: "Legal Quiz Club",
+    registrationUrl: "#/register/law-legal-eagle-quiz",
+    registerUrl: "#/register/law-legal-eagle-quiz",
+    image_url: null
+  },
+
+  /* ==========================================================================
+     ==========================================================================
+     INTER-DEPARTMENT COLLABORATIVE EVENTS
+     ==========================================================================
+     ========================================================================== */
   {
     id: "shared-robo-nexus",
     name: "Robo-Nexus Autonomous Cup",
@@ -809,9 +1418,12 @@ export const CANONICAL_EVENTS: CanonicalEvent[] = [
   }
 ];
 
-/**
- * Default General Festival Showcase Events (used when no specific department is selected)
- */
+/* ==========================================================================
+   ==========================================================================
+   GENERAL FESTIVAL SHOWCASE EVENTS (FALLBACK / GENERAL RIDE CARDS)
+   Used when no specific department or school is selected
+   ==========================================================================
+   ========================================================================== */
 export const DEFAULT_FESTIVAL_EVENTS: CanonicalEvent[] = [
   {
     id: "neon-drop",

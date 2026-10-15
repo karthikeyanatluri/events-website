@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { getDepartmentEvents, resolveDepartmentId, getDepartmentInfo, validateEventData, type CanonicalEvent } from "./data/eventsData";
 import { useEffect } from "react";
+import { schoolBySlug, schoolForDepartment } from "./pages/EventsPage/schools";
 import "./MidwayNights.scss";
 
 type ScriptWindow = Window & { __midwayNightsCleanup?: () => void };
@@ -25,7 +26,21 @@ function loadScript(src: string): Promise<void> {
 
 export default function MidwayNights() {
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const currentTent = (params.get('tent') || params.get('department') || '').toLowerCase().trim();
+  const rawTent = (params.get('tent') || params.get('department') || '').trim();
+  const tentKey = rawTent.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const deptInfo = tentKey ? getDepartmentInfo(tentKey) : null;
+  const tentDisplayName = deptInfo ? deptInfo.id : (rawTent ? rawTent.toUpperCase() : 'SUPRAGNA');
+  const tentTitle = tentDisplayName;
+  const deptFullName = deptInfo?.name || '';
+
+  // Resolve the particular school selected by the user
+  const explicitSchoolSlug = params.get('school');
+  const resolvedSchool = (explicitSchoolSlug ? schoolBySlug(explicitSchoolSlug) : null)
+    || schoolForDepartment(tentKey)
+    || schoolForDepartment(deptInfo?.id || '')
+    || schoolBySlug('engineering');
+  const schoolSlug = resolvedSchool?.slug || 'engineering';
+  const schoolReturnPath = `/events/${schoolSlug}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -53,11 +68,10 @@ export default function MidwayNights() {
   return (
     <div className="midway-nights-page">
             <header className="nav">
-        <a className="brand" href="/events" onClick={(e) => { e.preventDefault(); window.location.assign('/events'); }} title="Back to All Department Tents">
+        <a className="brand" href={schoolReturnPath} onClick={(e) => { e.preventDefault(); window.location.assign(schoolReturnPath); }} title="Back to School Department Tents">
           <span className="bulb" aria-hidden="true"></span>Events
         </a>
         <nav className="nav-links" aria-label="Primary">
-          <a className="btn primary small" href="#register" id="navRegister">Register</a>
           <a href="#about" className="nav-link" id="navAbout">About Us</a>
           <a href="#contact" className="nav-link" id="navContact">Contact Us</a>
         </nav>
@@ -68,15 +82,16 @@ export default function MidwayNights() {
           <canvas id="gl" aria-hidden="true"></canvas>
           <div className="shade" aria-hidden="true"></div>
           <div className="hero" id="hero">
-            <p className="kicker" id="heroKicker">Fri 6 &ndash; Sun 8 November 2026 &middot; Riverside Fairgrounds</p>
-            <h1>Events</h1>
+            <p className="kicker" id="heroKicker">SUPRAGNA 2K27</p>
+            <h1 id="heroTitle">{tentTitle}</h1>
+            {deptFullName && <p className="dept-sub" id="heroSub">{deptFullName}</p>}
             <p className="cue">Scroll to board the ride <span className="chev" aria-hidden="true"></span></p>
           </div>
           <div className="cards" id="cards"></div>
           <nav className="hud" id="hud" aria-label="Ride stops">
             <p className="now"><span className="now-n" id="nowN"></span><span className="now-t" id="nowT"></span></p>
             <div className="track"><span className="fill" id="fill"></span><ol className="stops" id="stops"></ol></div>
-            <a className="btn primary small" id="rideReturn" href="/events" hidden={true} onClick={(e) => { e.preventDefault(); window.location.assign('/events'); }}>Back to Events</a>
+            <a className="btn primary small" id="rideReturn" href={schoolReturnPath} onClick={(e) => { e.preventDefault(); window.location.assign(schoolReturnPath); }}>Back to Events</a>
           </nav>
           <p className="sr" id="live" aria-live="polite"></p>
         </section>
@@ -93,8 +108,7 @@ export default function MidwayNights() {
             <dl className="meta" id="sheetMeta"></dl>
             <p id="sheetText"></p>
             <div className="actions">
-              <a className="btn primary" id="sheetReg" href="#" data-register>Register</a>
-              <button className="btn ghost" id="sheetClose" type="button">Close</button>
+              <button className="btn primary" id="sheetClose" type="button">Close</button>
             </div>
           </div>
         </div>
@@ -103,8 +117,8 @@ export default function MidwayNights() {
       <dialog id="register" className="sheet info-sheet" aria-labelledby="regModalTitle">
         <div className="sheet-card">
           <div className="sheet-body">
-            <p className="chip">Carnival Registration • 2026</p>
-            <h2 id="regModalTitle">Register for Midway Nights</h2>
+            <p className="chip">SUPRAGNA 2K27 • Registration</p>
+            <h2 id="regModalTitle">Register for SUPRAGNA 2K27</h2>
             <p className="sheet-sub">
               Secure your spot for departmental hackathons, technical challenges, and live carnival attractions.
             </p>
@@ -233,23 +247,49 @@ function initializeMidwayNights() {
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
 
-  /* The department tent page can link here with ?tent=ai (or its matching slug).
-     Palette colors intentionally follow the tent colors; the carnival layout itself stays unchanged. */
+  /* The department tent page links here with ?tent=<slug>&color=<hex>.
+     Palette colors intentionally follow the exact tent colors for all schools. */
   const TENT_PALETTES = {
+    // School of Engineering:
     'ai': { name: 'AI', primary: '#4d2b63', secondary: '#d8c3e5', accent: '#ffd37a', deep: '#21132b', highlight: '#c39bdf' },
+    'ce': { name: 'CE', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
     'civil': { name: 'Civil', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
     'cse': { name: 'CSE', primary: '#03176b', secondary: '#c5d2ff', accent: '#ffd37a', deep: '#020a32', highlight: '#8198ff' },
+    'computer-science': { name: 'Computer Science', primary: '#03176b', secondary: '#c5d2ff', accent: '#ffd37a', deep: '#020a32', highlight: '#8198ff' },
     'ece': { name: 'ECE', primary: '#3b0c3c', secondary: '#e0c3e0', accent: '#ffd37a', deep: '#1b061c', highlight: '#c48ac6' },
+    'electronics': { name: 'Electronics', primary: '#3b0c3c', secondary: '#e0c3e0', accent: '#ffd37a', deep: '#1b061c', highlight: '#c48ac6' },
     'eee': { name: 'EEE', primary: '#342875', secondary: '#d1cbf2', accent: '#ffd37a', deep: '#171238', highlight: '#a89ae8' },
+    'electrical': { name: 'Electrical', primary: '#342875', secondary: '#d1cbf2', accent: '#ffd37a', deep: '#171238', highlight: '#a89ae8' },
     'eie': { name: 'EIE', primary: '#5a0a2e', secondary: '#edc5d6', accent: '#ffd37a', deep: '#280515', highlight: '#e28bb1' },
+    'me': { name: 'ME', primary: '#1a2a6b', secondary: '#c8d4f2', accent: '#ffd37a', deep: '#0b1232', highlight: '#8ea9ed' },
     'mechanical': { name: 'Mechanical', primary: '#1a2a6b', secondary: '#c8d4f2', accent: '#ffd37a', deep: '#0b1232', highlight: '#8ea9ed' },
-    'computer-science': { name: 'Computer Science', primary: '#c52f45', secondary: '#f5e8c9', accent: '#ffc65c', deep: '#3a1020', highlight: '#ff8a9a' },
-    'information-technology': { name: 'Information Technology', primary: '#168da4', secondary: '#f5ebd4', accent: '#43d7d0', deep: '#082d3a', highlight: '#65e9ef' },
-    'electronics': { name: 'Electronics', primary: '#28794d', secondary: '#f4e9cf', accent: '#d8ed79', deep: '#102d23', highlight: '#9edb89' },
-    'cultural-society': { name: 'Cultural Society', primary: '#8c32a0', secondary: '#f5ddec', accent: '#ff8fc9', deep: '#35113e', highlight: '#d77af1' },
-    'gaming-arena': { name: 'Gaming Arena', primary: '#354fe0', secondary: '#f5e8cf', accent: '#43e3ff', deep: '#101b5b', highlight: '#8da2ff' },
-    'civil-engineering': { name: 'Civil Engineering', primary: '#777568', secondary: '#eee9dc', accent: '#d8c9a7', deep: '#292922', highlight: '#c4c0b2' }
+
+    // School of Science:
+    'mca': { name: 'MCA', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
+    'bsc': { name: 'BSC', primary: '#1a2a6b', secondary: '#c8d4f2', accent: '#ffd37a', deep: '#0b1232', highlight: '#8ea9ed' },
+
+    // School of Management:
+    'business-administration': { name: 'Business Administration', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
+    'management': { name: 'Management', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
+
+    // School of Arts & Commerce:
+    'arts-and-commerce': { name: 'Arts & Commerce', primary: '#5a0a2e', secondary: '#edc5d6', accent: '#ffd37a', deep: '#280515', highlight: '#e28bb1' },
+    'arts-commerce': { name: 'Arts & Commerce', primary: '#5a0a2e', secondary: '#edc5d6', accent: '#ffd37a', deep: '#280515', highlight: '#e28bb1' },
+
+    // School of Law:
+    'law': { name: 'Law', primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
   };
+
+  const COLOR_SHADE_MAP = {
+    '#4d2b63': { primary: '#4d2b63', secondary: '#d8c3e5', accent: '#ffd37a', deep: '#21132b', highlight: '#c39bdf' },
+    '#50041d': { primary: '#50041d', secondary: '#edc7d1', accent: '#ffd37a', deep: '#26020e', highlight: '#d77b97' },
+    '#03176b': { primary: '#03176b', secondary: '#c5d2ff', accent: '#ffd37a', deep: '#020a32', highlight: '#8198ff' },
+    '#3b0c3c': { primary: '#3b0c3c', secondary: '#e0c3e0', accent: '#ffd37a', deep: '#1b061c', highlight: '#c48ac6' },
+    '#342875': { primary: '#342875', secondary: '#d1cbf2', accent: '#ffd37a', deep: '#171238', highlight: '#a89ae8' },
+    '#5a0a2e': { primary: '#5a0a2e', secondary: '#edc5d6', accent: '#ffd37a', deep: '#280515', highlight: '#e28bb1' },
+    '#1a2a6b': { primary: '#1a2a6b', secondary: '#c8d4f2', accent: '#ffd37a', deep: '#0b1232', highlight: '#8ea9ed' },
+  };
+
   const params = new URLSearchParams(window.location.search);
   const tentKey = (params.get('tent') || params.get('department') || '').toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -257,14 +297,29 @@ function initializeMidwayNights() {
   validateEventData();
   const canonicalDeptId = resolveDepartmentId(tentKey);
   const deptInfo = getDepartmentInfo(tentKey);
-  const EVENTS: CanonicalEvent[] = getDepartmentEvents(canonicalDeptId);
-  const TENT_PALETTE = TENT_PALETTES[tentKey] || {
-    name: 'Midway Carnival', primary: '#8e44ff', secondary: '#ff3aa8', accent: '#ffc65c', deep: '#17103d', highlight: '#3ae3ff'
-  };
+  const EVENTS = getDepartmentEvents(canonicalDeptId);
+  const TENT_PALETTE = Object.assign({}, TENT_PALETTES[tentKey] || {
+    name: 'SUPRAGNA 2K27', primary: '#8e44ff', secondary: '#ff3aa8', accent: '#ffc65c', deep: '#17103d', highlight: '#3ae3ff'
+  });
   const customColor = params.get('color');
-  if (customColor && /^#?[0-9a-f]{6}$/i.test(customColor)) TENT_PALETTE.primary = customColor.startsWith('#') ? customColor : '#' + customColor;
+  if (customColor) {
+    const hex = (customColor.startsWith('#') ? customColor : '#' + customColor).toLowerCase();
+    if (COLOR_SHADE_MAP[hex]) {
+      Object.assign(TENT_PALETTE, COLOR_SHADE_MAP[hex]);
+    } else if (/^#[0-9a-f]{6}$/i.test(hex)) {
+      TENT_PALETTE.primary = hex;
+    }
+  }
+  const explicitSchool = params.get('school');
+  const resolvedSchool = (explicitSchool ? schoolBySlug(explicitSchool) : null)
+    || schoolForDepartment(tentKey)
+    || schoolForDepartment(deptInfo?.id || '')
+    || schoolBySlug('engineering');
+  const schoolSlug = resolvedSchool?.slug || 'engineering';
+  const schoolReturnPath = `/events/${schoolSlug}`;
+
   const returnCandidate = params.get('return') || document.referrer;
-  let returnUrl = new URL('/events', window.location.origin);
+  let returnUrl = new URL(schoolReturnPath, window.location.origin);
   try {
     const candidate = returnCandidate ? new URL(returnCandidate, window.location.href) : null;
     if (candidate && candidate.origin === window.location.origin && candidate.pathname !== window.location.pathname) returnUrl = candidate;
@@ -278,9 +333,15 @@ function initializeMidwayNights() {
   rootStyle.setProperty('--line', 'color-mix(in srgb, ' + TENT_PALETTE.secondary + ' 28%, transparent)');
   rootStyle.setProperty('--glass', 'color-mix(in srgb, ' + TENT_PALETTE.deep + ' 82%, #080718)');
   const heroKicker = document.getElementById('heroKicker');
-  const deptDisplayName = deptInfo ? `${deptInfo.name} (${deptInfo.id})` : TENT_PALETTE.name;
-  if (heroKicker) heroKicker.textContent = deptDisplayName.toUpperCase() + ' • CARNIVAL COASTER';
-  document.title = (deptInfo ? deptInfo.id : TENT_PALETTE.name) + ' | Events';
+  const heroTitle = document.getElementById('heroTitle');
+  const heroSub = document.getElementById('heroSub');
+  const tentDisplayName = deptInfo ? deptInfo.id : (tentKey ? tentKey.toUpperCase() : 'SUPRAGNA');
+  const tentTitle = tentDisplayName;
+
+  if (heroKicker) heroKicker.textContent = 'SUPRAGNA 2K27';
+  if (heroTitle) heroTitle.textContent = tentTitle;
+  if (heroSub && deptInfo?.name) heroSub.textContent = deptInfo.name;
+  document.title = `${tentDisplayName} | SUPRAGNA 2K27`;
   const smooth = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const pad2 = n => String(n).padStart(2, '0');
   const $ = (s, r = document) => r.querySelector(s);
@@ -379,7 +440,7 @@ function initializeMidwayNights() {
           <p style="margin-top: 1rem; color: #d8c3e5;">There are currently no events registered for this department. Please check back later or explore other departments!</p>
         </div>
         <div class="actions" style="justify-content: center; margin-top: 2rem;">
-          <a class="btn primary" href="/events" id="emptyBackBtn">Back to Departments</a>
+          <a class="btn primary" href="${returnUrl.pathname}" id="emptyBackBtn">Back to Departments</a>
         </div>
       </div>
     `;
@@ -425,8 +486,7 @@ function initializeMidwayNights() {
            <p>${blurbText}</p>
          </div>
          <div class="actions">
-           <a class="btn primary" href="${regUrl}" data-register data-i="${i}">${regBtnText}</a>
-           <button class="btn ghost" type="button" data-details="${i}">Details</button>
+           <button class="btn primary" type="button" data-details="${i}">Details</button>
          </div>
          <div class="marquee bottom" aria-hidden="true"></div>
        </div>`;
@@ -459,6 +519,10 @@ function initializeMidwayNights() {
     $('#sheetTitle').textContent = ev.title || ev.name;
 
     const metaList = [];
+    if (ev.departmentId) {
+      const dName = Array.isArray(ev.departmentId) ? ev.departmentId.join(', ') : ev.departmentId;
+      metaList.push(['Department', dName]);
+    }
     if (ev.date) metaList.push(['Date', ev.date]);
     if (ev.time) metaList.push(['Time', ev.time]);
     if (ev.venue) metaList.push(['Venue', ev.venue]);
@@ -468,11 +532,6 @@ function initializeMidwayNights() {
     $('#sheetMeta').innerHTML = metaList
       .map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
     $('#sheetText').textContent = ev.details || ev.description || ev.blurb || '';
-    const reg = $('#sheetReg');
-    const targetUrl = ev.registerUrl || ev.registrationUrl || '#';
-    reg.href = targetUrl;
-    reg.dataset.i = i;
-    reg.textContent = (ev.registerUrl || ev.registrationUrl) ? 'Register' : 'Coming Soon';
     if (typeof sheet.showModal === 'function') sheet.showModal(); else sheet.setAttribute('open', '');
   }
 
@@ -503,7 +562,8 @@ function initializeMidwayNights() {
     }
     clearTimeout(finalRedirectTimer);
     finalRedirectTimer = 0;
-    window.location.assign('/events');
+    const dest = returnUrl.pathname.startsWith('/events/') ? (returnUrl.pathname + returnUrl.search) : schoolReturnPath;
+    window.location.assign(dest);
   }
 
   if (returnEvents) on(returnEvents, 'click', returnToEvents);
@@ -512,11 +572,9 @@ function initializeMidwayNights() {
   on(cardsEl, 'click', e => {
     const d = e.target.closest('[data-details]');
     if (d) { openEvent(+d.dataset.details); return; }
-    onRegister(e);
   });
   if (sheet) on(sheet, 'click', e => {
     if (e.target === sheet) sheet.close();
-    else onRegister(e);
   });
   const sheetCloseBtn = $('#sheetClose'); if (sheetCloseBtn) on(sheetCloseBtn, 'click', () => sheet?.close?.());
 
@@ -533,7 +591,7 @@ function initializeMidwayNights() {
     if (i === nearest) return;
     nearest = i;
     if (N_EV > 0 && EVENTS[i]) {
-      nowN.textContent = `Stop ${pad2(i + 1)} / ${pad2(N_EV)}`;
+      nowN.textContent = `STOP ${pad2(i + 1)}\u00A0/\u00A0${pad2(N_EV)}`;
       nowT.textContent = EVENTS[i].title || EVENTS[i].name;
     } else if (N_EV === 0) {
       nowN.textContent = 'No events';
@@ -685,7 +743,7 @@ function initializeMidwayNights() {
 
     /* ---- rails, spine, ties ---- */
     const GAUGE = 1.3;
-    const railMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.secondary, metalness: 0.6, roughness: 0.35, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.42 });
+    const railMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.primary, metalness: 0.6, roughness: 0.35, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.6 });
     const spineMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.deep, metalness: 0.5, roughness: 0.5, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.5 });
     const tieMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.deep, metalness: 0.3, roughness: 0.6, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.34 });
     const supMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.primary, metalness: 0.35, roughness: 0.55, emissive: TENT_PALETTE.deep, emissiveIntensity: 0.45 });
@@ -1055,12 +1113,12 @@ function initializeMidwayNights() {
       let live = -1;
       for (let i = 0; i < N_EV; i++) if (Math.abs(i - A) < 0.4) live = i;
       setLive(live);
-      rideReturn.hidden = p < 0.999;
-      if (rideReturn.hidden) {
+      rideReturn.hidden = false;
+      if (p >= 0.999) {
+        if (!finalRedirectTimer) scheduleFinalRedirect();
+      } else {
         clearTimeout(finalRedirectTimer);
         finalRedirectTimer = 0;
-      } else if (!finalRedirectTimer) {
-        scheduleFinalRedirect();
       }
     }
 
