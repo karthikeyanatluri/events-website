@@ -29,3 +29,8 @@ dist-ssr
 !.env.example
 *.pem
 *.key
+
+# Temporary artifacts & cache
+scratch/
+__pycache__/
+*.pyc

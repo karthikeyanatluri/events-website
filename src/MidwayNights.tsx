@@ -48,9 +48,18 @@ export default function MidwayNights() {
 
     const start = async () => {
       try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js");
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js");
+        if ((window as any).THREE && (window as any).gsap && (window as any).ScrollTrigger) {
+          if (cancelled) return;
+          initializeMidwayNights();
+          return;
+        }
+        await Promise.all([
+          (window as any).THREE ? Promise.resolve() : loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"),
+          (window as any).gsap ? Promise.resolve() : loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js")
+        ]);
+        if (!(window as any).ScrollTrigger) {
+          await loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js");
+        }
         if (cancelled) return;
         initializeMidwayNights();
       } catch (error) {
@@ -72,6 +81,19 @@ export default function MidwayNights() {
           <span className="bulb" aria-hidden="true"></span>Events
         </a>
         <nav className="nav-links" aria-label="Primary">
+          <button
+            type="button"
+            className="nav-register-btn"
+            id="navRegister"
+            onClick={() => {
+              const regModal = document.getElementById('register') as HTMLDialogElement;
+              if (regModal?.showModal) regModal.showModal();
+              else if (regModal) regModal.setAttribute('open', '');
+            }}
+            title="Register for SUPRAGNA 2K27"
+          >
+            Register
+          </button>
           <a href="#about" className="nav-link" id="navAbout">About Us</a>
           <a href="#contact" className="nav-link" id="navContact">Contact Us</a>
         </nav>
@@ -238,6 +260,10 @@ export default function MidwayNights() {
 function initializeMidwayNights() {
 
   'use strict';
+
+  if (typeof window !== 'undefined' && (window as any).THREE) {
+    (window as any).THREE.Cache.enabled = true;
+  }
 
   /* =====================================================================
      Events: scroll-driven carnival coaster showcase
@@ -672,6 +698,55 @@ function initializeMidwayNights() {
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return t;
   }
 
+  function createSkyscraperTexture() {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext('2d');
+    if (!ctx) return new THREE.CanvasTexture(c);
+
+    // Deep architectural night facade
+    ctx.fillStyle = '#080a16';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Vertical structural mullions
+    ctx.fillStyle = '#0f1424';
+    for (let x = 0; x < 512; x += 32) {
+      ctx.fillRect(x, 0, 4, 512);
+    }
+
+    // Windows with warm gold, amber, and office white illumination
+    const winColors = [
+      '#ffeaa7', // Warm incandescent gold
+      '#ffd166', // Amber glow
+      '#ffffff', // Bright white office
+      '#e3f2fd', // Soft cool white
+      '#ffbe76', // Soft candle amber
+      '#0e1224', // Unlit dark window
+      '#0e1224',
+      '#0e1224',
+      '#080a14'
+    ];
+
+    for (let y = 14; y < 504; y += 14) {
+      // Horizontal floor shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillRect(0, y + 10, 512, 4);
+
+      for (let x = 6; x < 506; x += 16) {
+        if ((x % 32) < 4) continue;
+        const col = winColors[Math.floor(Math.random() * winColors.length)];
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, 9, 8);
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
   function disposeScene(scene) {
     scene.traverse(o => {
       if (o.geometry) o.geometry.dispose();
@@ -682,7 +757,7 @@ function initializeMidwayNights() {
 
   function buildCarnival() {
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x1b0f40, 30, 520);
+    scene.fog = new THREE.Fog(0x131a32, 60, 680);
     const glow = glowTexture();
     const rng = mulberry32(2026);
     const bulbs = new Bulbs();      // small lights: track, strings, tents
@@ -696,10 +771,50 @@ function initializeMidwayNights() {
     const skyGroup = new THREE.Group(); scene.add(skyGroup);
     const sc = document.createElement('canvas'); sc.width = 8; sc.height = 512;
     const sg = sc.getContext('2d'), grd = sg.createLinearGradient(0, 0, 0, 512);
-    [[0, '#03041a'], [0.32, '#0a0a30'], [0.46, '#2a1262'], [0.495, '#4a1a78'], [0.505, '#1b0f40'], [1, '#0a0620']].forEach(s => grd.addColorStop(s[0], s[1]));
+    [[0, '#020314'], [0.25, '#08082c'], [0.45, '#1e0e4a'], [0.495, '#3a1460'], [0.505, '#160a34'], [1, '#060418']].forEach(s => grd.addColorStop(s[0], s[1]));
     sg.fillStyle = grd; sg.fillRect(0, 0, 8, 512);
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 24, 16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), side: THREE.BackSide, fog: false, depthWrite: false }));
+    const celestialSkyMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), side: THREE.BackSide, fog: false, depthWrite: false });
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 32, 20), celestialSkyMat);
     sky.renderOrder = -10; skyGroup.add(sky);
+
+    // Realistic celestial galaxy sky
+    const texLoader = new THREE.TextureLoader();
+    texLoader.load('/sky-galaxy.png', (tex) => {
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      celestialSkyMat.map = tex;
+      celestialSkyMat.needsUpdate = true;
+    });
+
+    // Photorealistic Luminous Full Moon (matching user reference image)
+    const moonTex = texLoader.load('/assets/moon_celestial.png');
+    const moonGeo = new THREE.PlaneGeometry(95, 95);
+    const moonMat = new THREE.MeshBasicMaterial({
+      map: moonTex,
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+      blending: THREE.AdditiveBlending
+    });
+    const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    moonMesh.position.set(0, 80, -315);
+    skyGroup.add(moonMesh);
+
+    // Warm golden halo around the moon
+    const moonGlowGeo = new THREE.PlaneGeometry(175, 175);
+    const moonGlowMat = new THREE.MeshBasicMaterial({
+      map: glow,
+      color: 0xffeed0,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false
+    });
+    const moonGlowMesh = new THREE.Mesh(moonGlowGeo, moonGlowMat);
+    moonGlowMesh.position.set(0, 80, -316);
+    skyGroup.add(moonGlowMesh);
+
     const sp = [], sCol = [];
     for (let i = 0; i < TIER.stars; i++) {
       let x, y, z;
@@ -713,8 +828,8 @@ function initializeMidwayNights() {
     stars.frustumCulled = false; skyGroup.add(stars);
 
     /* ---- lights ---- */
-    scene.add(new THREE.HemisphereLight(0x6a57d9, 0x0d0a26, 0.8));
-    const moon = new THREE.DirectionalLight(0x7fb4ff, 0.55); moon.position.set(-80, 120, 40); scene.add(moon);
+    scene.add(new THREE.HemisphereLight(0x7e5be0, 0x346b28, 1.1));
+    const moon = new THREE.DirectionalLight(0xffeed0, 0.85); moon.position.set(-80, 120, 40); scene.add(moon);
 
     /* ---- track path: stations, lift hill, drop, banked turns, brake run ---- */
     const CTRL = [[0, 4, 12], [0, 4, -20], [0, 9, -52], [0, 20, -86], [5, 24, -112], [19, 22, -132], [35, 8, -152], [49, 5, -178], [46, 12, -208],
@@ -743,7 +858,9 @@ function initializeMidwayNights() {
 
     /* ---- rails, spine, ties ---- */
     const GAUGE = 1.3;
-    const railMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.primary, metalness: 0.6, roughness: 0.35, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.6 });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x8b32e0, metalness: 0.5, roughness: 0.25, emissive: 0x9d4edd, emissiveIntensity: 0.95 });
+    // Glowing neon LED light strip along top of each rail (matching reference image)
+    const neonRailMat = new THREE.MeshBasicMaterial({ color: 0xf5d0fe });
     const spineMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.deep, metalness: 0.5, roughness: 0.5, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.5 });
     const tieMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.deep, metalness: 0.3, roughness: 0.6, emissive: TENT_PALETTE.primary, emissiveIntensity: 0.34 });
     const supMat = new THREE.MeshStandardMaterial({ color: TENT_PALETTE.primary, metalness: 0.35, roughness: 0.55, emissive: TENT_PALETTE.deep, emissiveIntensity: 0.45 });
@@ -751,8 +868,11 @@ function initializeMidwayNights() {
       const arr = pts.map((p, i) => off(p, i));
       return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arr, false, 'catmullrom', 0.5), N - 1, radius, TIER.radial, false), mat);
     };
-    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], GAUGE / 2), 0.07, railMat));
-    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], -GAUGE / 2), 0.07, railMat));
+    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], GAUGE / 2), 0.08, railMat));
+    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], -GAUGE / 2), 0.08, railMat));
+    // Glowing neon LED strip running along the rails
+    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], GAUGE / 2).addScaledVector(U[i], 0.06), 0.035, neonRailMat));
+    scene.add(tube((p, i) => p.clone().addScaledVector(R[i], -GAUGE / 2).addScaledVector(U[i], 0.06), 0.035, neonRailMat));
     scene.add(tube((p, i) => p.clone().addScaledVector(U[i], -0.5), 0.17, spineMat));
 
     const tieStep = Math.max(2, Math.round(1.5 / ds));
@@ -804,9 +924,51 @@ function initializeMidwayNights() {
     addBox(14, 0.35, 38, 0, 9.6, -6, stMat);
     addBox(14.4, 0.16, 38.4, 0, 9.3, -6, new THREE.MeshBasicMaterial({ color: TENT_PALETTE.primary }));
 
-    /* ---- ground + midway path ---- */
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(900, 48), new THREE.MeshStandardMaterial({ color: 0x0c0a26, roughness: 0.95, metalness: 0 }));
-    ground.rotation.x = -Math.PI / 2; scene.add(ground);
+    /* ---- ground + celebration carnival midway promenade ---- */
+    const groundCanvas = document.createElement('canvas');
+    groundCanvas.width = 512;
+    groundCanvas.height = 512;
+    const gg = groundCanvas.getContext('2d');
+    if (gg) {
+      // Lush green lawn matching the home page greenery
+      gg.fillStyle = '#26541e';
+      gg.fillRect(0, 0, 512, 512);
+      for (let x = 0; x < 512; x += 32) {
+        gg.fillStyle = (x / 32) % 2 === 0 ? 'rgba(52, 114, 40, 0.3)' : 'rgba(24, 62, 18, 0.2)';
+        gg.fillRect(x, 0, 32, 512);
+      }
+      // Sandy golden walkways crossing the lawn
+      gg.strokeStyle = '#c87a32';
+      gg.lineWidth = 26;
+      gg.beginPath();
+      gg.moveTo(0, 140); gg.bezierCurveTo(160, 180, 340, 110, 512, 180);
+      gg.stroke();
+      gg.beginPath();
+      gg.moveTo(130, 0); gg.bezierCurveTo(160, 210, 200, 360, 290, 512);
+      gg.stroke();
+      // Meadow blade flecks
+      for (let i = 0; i < 2000; i++) {
+        gg.fillStyle = Math.random() > 0.5 ? 'rgba(72, 150, 56, 0.25)' : 'rgba(16, 42, 12, 0.3)';
+        gg.fillRect(Math.random() * 512, Math.random() * 512, 2, 4);
+      }
+    }
+    const groundTex = new THREE.CanvasTexture(groundCanvas);
+    groundTex.wrapS = THREE.RepeatWrapping;
+    groundTex.wrapT = THREE.RepeatWrapping;
+    groundTex.repeat.set(24, 24);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(1200, 48),
+      new THREE.MeshStandardMaterial({
+        map: groundTex,
+        roughness: 0.85,
+        metalness: 0.05
+      })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // Sandy golden-orange promenade under the coaster (matching home page)
     {
       const pos = [], idx = []; let k = 0;
       for (let i = 0; i < N; i += 3) {
@@ -815,8 +977,28 @@ function initializeMidwayNights() {
         if (k > 0) { const a = (k - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
         k++;
       }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-      scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x13103a, roughness: 0.9, emissive: 0x0a0826, emissiveIntensity: 0.8, side: THREE.DoubleSide })));
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+        color: 0xc87a32,
+        roughness: 0.8,
+        emissive: 0x3d2008,
+        emissiveIntensity: 0.35,
+        side: THREE.DoubleSide
+      })));
+    }
+
+    // Warm festoon lights along the trackside fences (matching reference image)
+    for (let i = 2; i < N - 6; i += 6) {
+      const hl = Math.hypot(R[i].x, R[i].z) || 1;
+      [-7.2, 7.2].forEach(side => {
+        const postX = pts[i].x + (R[i].x / hl) * side;
+        const postZ = pts[i].z + (R[i].z / hl) * side;
+        members.push([V(postX, 0, postZ), V(postX, 1.4, postZ), 0.05]);
+        bulbs.add(V(postX, 1.45, postZ), C.warm, 1.35);
+      });
     }
 
     /* ---- scatter helpers for attractions ---- */
@@ -845,6 +1027,10 @@ function initializeMidwayNights() {
       scene.add(body, roof);
       ring(x, h * 0.38, z, rad * 1.08, 22, a => cycle[a % 5]);
       beacons.add(V(x, h + 0.4, z), C.mag, 0.9);
+      // Warm glowing lantern light inside each tent
+      const tentLight = new THREE.PointLight(0xffbe55, 1.1, 28, 1.6);
+      tentLight.position.set(x, 2.5, z);
+      scene.add(tentLight);
     };
     const carousel = (x, z) => {
       const mat = stripeMat(Math.floor(rng() * 3));
@@ -880,10 +1066,10 @@ function initializeMidwayNights() {
       }
     };
     const P = TIER.props;
-    scatter(Math.round(10 * P), 18, 62, 14, 6.5, tent);
+    scatter(Math.round(18 * P), 16, 75, 12, 6.5, tent);
     scatter(Math.max(1, Math.round(2 * P)), 24, 60, 14, 7, carousel);
     scatter(Math.max(1, Math.round(3 * P)), 30, 70, 14, 3, tower);
-    scatter(Math.round(4 * P), 16, 55, 14, 11, booths);
+    scatter(Math.round(5 * P), 16, 55, 14, 11, booths);
 
     /* ---- light poles, string lights, light pools on the ground ---- */
     const poolList = [], segs = [];
@@ -921,19 +1107,620 @@ function initializeMidwayNights() {
       pool.instanceMatrix.needsUpdate = true; pool.frustumCulled = false; scene.add(pool);
     }
 
-    /* ---- dust motes + distant skyline ---- */
+    /* ---- dust motes ---- */
     const dust = new Bulbs();
     for (let k = 0; k < TIER.dust; k++) {
       const i = Math.floor(rng() * N);
       dust.add(V(pts[i].x + (rng() - 0.5) * 90, 1 + rng() * 38, pts[i].z + (rng() - 0.5) * 90), cycle[k % 5], 0.35 + rng() * 0.35);
     }
     scene.add(dust.build(glow, 0.55, 0.7));
-    const skyMat = new THREE.MeshBasicMaterial({ color: 0x120a30 });
-    for (let k = 0; k < 64; k++) {
-      const a = rng() * Math.PI * 2, rr = 300 + rng() * 110, h = 10 + rng() * 44;
-      const b = new THREE.Mesh(new THREE.BoxGeometry(10 + rng() * 20, h, 10 + rng() * 20), skyMat);
-      b.position.set(Math.cos(a) * rr, h / 2, -190 + Math.sin(a) * rr); scene.add(b);
-      if (rng() < 0.4) beacons.add(V(b.position.x, h + 0.5, b.position.z), C.mag, 0.7);
+
+    /* ---- realistic illuminated city skyline & natural park tree canopy line (matching reference image) ---- */
+    const crowdTexLoader = new THREE.TextureLoader();
+    const panoTex = crowdTexLoader.load('/assets/realistic_city_panorama.png');
+    panoTex.wrapS = THREE.RepeatWrapping;
+    panoTex.repeat.set(3, 1);
+
+    // Curved panoramic horizon backdrop spanning behind the carnival
+    const panoGeo = new THREE.CylinderGeometry(450, 450, 200, 48, 1, true, -Math.PI * 0.85, Math.PI * 1.7);
+    const panoMat = new THREE.MeshBasicMaterial({
+      map: panoTex,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+      fog: false
+    });
+    const panoMesh = new THREE.Mesh(panoGeo, panoMat);
+    panoMesh.position.set(0, 90, -180);
+    scene.add(panoMesh);
+
+    // Deep architectural spires and aviation safety beacons rising above the skyline
+    const spireCoords = [
+      { x: -140, z: -460, h: 145 },
+      { x: -85,  z: -490, h: 165 },
+      { x: -30,  z: -470, h: 180 },
+      { x: 35,   z: -480, h: 175 },
+      { x: 90,   z: -460, h: 155 },
+      { x: 150,  z: -450, h: 140 }
+    ];
+    spireCoords.forEach(sp => {
+      members.push([V(sp.x, 0, sp.z), V(sp.x, sp.h, sp.z), 0.35]);
+      beacons.add(V(sp.x, sp.h + 0.6, sp.z), new THREE.Color(0xff2222), 1.8);
+    });
+
+    // Realistic organic park trees with tapered trunks and multi-layered faceted foliage crowns
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x18130e,
+      roughness: 0.95,
+      metalness: 0.05
+    });
+    const foliageColors = [0x091e10, 0x0e2815, 0x13341b, 0x183f21];
+    const foliageMats = foliageColors.map(c => new THREE.MeshStandardMaterial({
+      color: c,
+      roughness: 0.85,
+      flatShading: true
+    }));
+    const treeShadowMat = new THREE.MeshBasicMaterial({ color: 0x050e07, transparent: true, opacity: 0.45, depthWrite: false });
+
+    function createRealisticParkTree(x, z, scale = 1.0) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+
+      const trunkH = 7 + rng() * 5;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.65, trunkH, 7), trunkMat);
+      trunk.position.y = trunkH / 2;
+      g.add(trunk);
+
+      const numClusters = 4 + Math.floor(rng() * 3);
+      for (let c = 0; c < numClusters; c++) {
+        const fMat = foliageMats[Math.floor(rng() * foliageMats.length)];
+        const clusterR = 3.8 + rng() * 3.2;
+        const cluster = new THREE.Mesh(new THREE.IcosahedronGeometry(clusterR, 1), fMat);
+        const cy = trunkH * 0.72 + (c / numClusters) * 7.5 + (rng() - 0.5) * 1.5;
+        const cx = (rng() - 0.5) * 4.2;
+        const cz = (rng() - 0.5) * 4.2;
+        cluster.position.set(cx, cy, cz);
+        cluster.scale.set(1.0 + (rng() - 0.5) * 0.25, 0.9 + (rng() - 0.5) * 0.25, 1.0 + (rng() - 0.5) * 0.25);
+        cluster.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
+        g.add(cluster);
+      }
+
+      const sh = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), treeShadowMat);
+      sh.rotation.x = -Math.PI / 2;
+      sh.position.y = 0.02;
+      g.add(sh);
+
+      scene.add(g);
+      return g;
+    }
+
+    // 1. Natural perimeter forest tree line framing the carnival park
+    for (let k = 0; k < 55; k++) {
+      const a = (k / 55) * Math.PI * 2;
+      const rr = 210 + rng() * 45;
+      const tx = Math.cos(a) * rr;
+      const tz = -190 + Math.sin(a) * rr;
+      createRealisticParkTree(tx, tz, 1.2 + rng() * 0.6);
+    }
+
+    // 2. Midground copses of trees around the carnival lawn and midway
+    for (let k = 0; k < 22; k++) {
+      const a = rng() * Math.PI * 2;
+      const rr = 45 + rng() * 110;
+      const tx = Math.cos(a) * rr;
+      const tz = -180 + Math.sin(a) * rr;
+      if (clear(tx, tz, 14) && spaced(tx, tz, 8)) {
+        createRealisticParkTree(tx, tz, 0.8 + rng() * 0.4);
+      }
+    }
+
+    /* ---- overhead festive light garlands (canopy of festoon bulbs across midway) ---- */
+    for (let i = 8; i < N - 12; i += 18) {
+      const hl = Math.hypot(R[i].x, R[i].z) || 1;
+      [-1, 1].forEach(side => {
+        const pStart = V(pts[i].x + (R[i].x / hl) * side * 8.5, 7.2, pts[i].z + (R[i].z / hl) * side * 8.5);
+        const pEnd = V(pts[i].x + (R[i].x / hl) * side * (26 + rng() * 14), 6.0 + rng() * 3.0, pts[i].z + (R[i].z / hl) * side * 24 + (rng() - 0.5) * 20);
+
+        const garlandSegs = [];
+        const numBulbs = 14;
+        let lastV = null;
+        for (let b = 0; b <= numBulbs; b++) {
+          const t = b / numBulbs;
+          const v = pStart.clone().lerp(pEnd, t);
+          v.y -= 2.4 * 4 * t * (1 - t);
+          if (b % 1 === 0 && b > 0 && b < numBulbs) {
+            bulbs.add(v, b % 2 === 0 ? C.gold : C.warm, 1.15);
+          }
+          if (lastV) garlandSegs.push(lastV.x, lastV.y, lastV.z, v.x, v.y, v.z);
+          lastV = v;
+        }
+        if (garlandSegs.length) {
+          const gg = new THREE.BufferGeometry();
+          gg.setAttribute('position', new THREE.Float32BufferAttribute(garlandSegs, 3));
+          scene.add(new THREE.LineSegments(gg, new THREE.LineBasicMaterial({ color: 0x3d3570 })));
+        }
+      });
+    }
+
+    /* ---- illuminated festival Ferris wheel (matching reference image) ---- */
+    const wheelGroup = new THREE.Group();
+    const wheelX = -105, wheelZ = -155, wheelHubY = 32, wheelR = 25;
+    wheelGroup.position.set(wheelX, wheelHubY, wheelZ);
+    scene.add(wheelGroup);
+
+    // Support A-frame towers down to ground
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x3d1c68, metalness: 0.6, roughness: 0.4 });
+    const legGeo = new THREE.CylinderGeometry(0.45, 0.75, wheelHubY * 1.15, 8);
+    const legLeft = new THREE.Mesh(legGeo, towerMat);
+    legLeft.position.set(wheelX - 8.5, wheelHubY / 2, wheelZ);
+    legLeft.rotation.z = -0.26;
+    const legRight = new THREE.Mesh(legGeo, towerMat);
+    legRight.position.set(wheelX + 8.5, wheelHubY / 2, wheelZ);
+    legRight.rotation.z = 0.26;
+    scene.add(legLeft, legRight);
+
+    // Outer & inner glowing structural rings
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xc842f5 });
+    const outerRing = new THREE.Mesh(new THREE.TorusGeometry(wheelR, 0.4, 8, 36), ringMat);
+    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(wheelR * 0.65, 0.3, 8, 36), new THREE.MeshBasicMaterial({ color: 0x22d3ee }));
+    wheelGroup.add(outerRing, innerRing);
+
+    // Spokes and passenger gondolas
+    const gondolaGeo = new THREE.BoxGeometry(2.0, 1.8, 1.6);
+    const gondolaMat = new THREE.MeshStandardMaterial({
+      color: 0x24104c,
+      emissive: 0xffaa33,
+      emissiveIntensity: 0.45,
+      roughness: 0.6
+    });
+
+    const numSpokes = 18;
+    const gondolas = [];
+    for (let s = 0; s < numSpokes; s++) {
+      const ang = (s / numSpokes) * Math.PI * 2;
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, wheelR, 6), towerMat);
+      spoke.position.set(Math.cos(ang) * (wheelR / 2), Math.sin(ang) * (wheelR / 2), 0);
+      spoke.rotation.z = ang - Math.PI / 2;
+      wheelGroup.add(spoke);
+
+      const gondola = new THREE.Mesh(gondolaGeo, gondolaMat);
+      gondola.position.set(Math.cos(ang) * wheelR, Math.sin(ang) * wheelR, 0);
+      wheelGroup.add(gondola);
+      gondolas.push(gondola);
+
+      bulbs.add(V(wheelX + Math.cos(ang) * wheelR, wheelHubY + Math.sin(ang) * wheelR, wheelZ), s % 2 === 0 ? C.vio : C.cyan, 1.2);
+    }
+
+    /* ---- illuminated drop tower with chasing lights (matching reference image) ---- */
+    const dropTowerX = -46, dropTowerZ = -170, dropTowerH = 68;
+    members.push([V(dropTowerX, 0, dropTowerZ), V(dropTowerX, dropTowerH, dropTowerZ), 0.7]);
+    for (let y = 3; y < dropTowerH; y += 2.2) {
+      bulbs.add(V(dropTowerX + 1.1, y, dropTowerZ), y % 4.4 < 2.2 ? C.cyan : C.mag, 1.1);
+      bulbs.add(V(dropTowerX - 1.1, y, dropTowerZ), y % 4.4 < 2.2 ? C.mag : C.cyan, 1.1);
+      bulbs.add(V(dropTowerX, y, dropTowerZ + 1.1), C.gold, 0.9);
+    }
+    const dropCar = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 1.2, 18), new THREE.MeshStandardMaterial({
+      color: 0x1f1442,
+      emissive: 0x00d2ff,
+      emissiveIntensity: 0.5
+    }));
+    dropCar.position.set(dropTowerX, 48, dropTowerZ);
+    scene.add(dropCar);
+    ring(dropTowerX, 48.6, dropTowerZ, 3.8, 16, () => C.cyan, 1.2);
+    beacons.add(V(dropTowerX, dropTowerH + 0.8, dropTowerZ), C.gold, 2.2);
+    beacons.add(V(dropTowerX, dropTowerH + 2.4, dropTowerZ), new THREE.Color(0xff3366), 1.8);
+
+    /* ---- illuminated "FOOD" festival pavilion (matching reference image) ---- */
+    const foodGroup = new THREE.Group();
+    foodGroup.position.set(-66, 0, -125);
+    foodGroup.rotation.y = 0.38;
+    scene.add(foodGroup);
+
+    const foodBuilding = new THREE.Mesh(new THREE.BoxGeometry(14, 5.5, 7), stMat);
+    foodBuilding.position.set(0, 2.75, 0);
+    foodGroup.add(foodBuilding);
+
+    const foodAwning = new THREE.Mesh(new THREE.BoxGeometry(15, 0.35, 4), new THREE.MeshStandardMaterial({
+      color: 0x9b2226,
+      roughness: 0.8
+    }));
+    foodAwning.position.set(0, 5.5, 2.4);
+    foodAwning.rotation.x = 0.22;
+    foodGroup.add(foodAwning);
+
+    const foodCanvas = document.createElement('canvas');
+    foodCanvas.width = 256; foodCanvas.height = 128;
+    const fctx = foodCanvas.getContext('2d');
+    if (fctx) {
+      fctx.fillStyle = '#140606';
+      fctx.fillRect(0, 0, 256, 128);
+      fctx.strokeStyle = '#ff2233';
+      fctx.lineWidth = 6;
+      fctx.strokeRect(6, 6, 244, 116);
+      fctx.fillStyle = '#ffffff';
+      fctx.shadowColor = '#ff2233';
+      fctx.shadowBlur = 20;
+      fctx.font = 'bold 56px "Arial Black", Impact, sans-serif';
+      fctx.textAlign = 'center';
+      fctx.textBaseline = 'middle';
+      fctx.fillText('FOOD', 128, 64);
+    }
+    const foodSignTex = new THREE.CanvasTexture(foodCanvas);
+    const foodSignMat = new THREE.MeshBasicMaterial({ map: foodSignTex, transparent: true });
+    const foodSign = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 3.4), foodSignMat);
+    foodSign.position.set(0, 7.8, 2.6);
+    foodGroup.add(foodSign);
+
+    const foodLight = new THREE.PointLight(0xffbe55, 1.8, 28, 1.4);
+    foodLight.position.set(0, 4.5, 3.2);
+    foodGroup.add(foodLight);
+    bulbs.add(V(-66, 7.8, -122), new THREE.Color(0xff3344), 1.6);
+
+    /* ---- secondary scenic roller coaster spanning the right horizon (matching reference image) ---- */
+    const bgCoasterCtrl = [
+      V(52, 6, -100),
+      V(72, 26, -135),   // First camelback hill
+      V(94, 8, -170),    // Valley
+      V(120, 36, -210),  // Giant hill
+      V(146, 10, -250),  // Valley
+      V(172, 28, -285),  // Third hill
+      V(192, 6, -320)
+    ];
+    const bgCurve = new THREE.CatmullRomCurve3(bgCoasterCtrl, false, 'centripetal');
+    const bgPoints = bgCurve.getPoints(120);
+    const bgRailGeo = new THREE.TubeGeometry(bgCurve, 90, 0.32, 6, false);
+    const bgRailMat = new THREE.MeshBasicMaterial({ color: 0xff6611 });
+    const bgRailMesh = new THREE.Mesh(bgRailGeo, bgRailMat);
+    scene.add(bgRailMesh);
+
+    for (let k = 8; k < bgPoints.length - 8; k += 10) {
+      const pt = bgPoints[k];
+      members.push([V(pt.x, 0, pt.z), V(pt.x, pt.y - 0.2, pt.z), 0.32]);
+      if (pt.y > 18) {
+        beacons.add(V(pt.x, pt.y + 0.6, pt.z), new THREE.Color(0xff3311), 1.3);
+      }
+    }
+
+    /* ---- large foreground festival pavilions framing the midway (matching reference image) ---- */
+    const createFramingPavilion = (x, z, sideColor, rad = 7.5, h = 8.5) => {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      scene.add(g);
+
+      const pStripe = stripeTexture(sideColor, '#ffffff');
+      const pMat = new THREE.MeshStandardMaterial({
+        map: pStripe,
+        emissiveMap: pStripe,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.45,
+        roughness: 0.8,
+        side: THREE.DoubleSide
+      });
+
+      const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.2, rad * 1.15, h * 0.55, 24, 1, true), pMat);
+      roof.position.y = h * 0.45 + h * 0.27;
+      g.add(roof);
+
+      for (let a = 0; a < 10; a++) {
+        const t = (a / 10) * Math.PI * 2;
+        members.push([V(x + Math.cos(t) * rad, 0, z + Math.sin(t) * rad), V(x + Math.cos(t) * rad, h * 0.45, z + Math.sin(t) * rad), 0.12]);
+      }
+
+      const counter = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.8, rad * 0.8, 1.1, 20), stMat);
+      counter.position.y = 0.55;
+      g.add(counter);
+
+      const pLight = new THREE.PointLight(0xffbe55, 2.2, 35, 1.4);
+      pLight.position.set(0, 3.5, 0);
+      g.add(pLight);
+
+      for (let a = 0; a < 22; a++) {
+        const t = (a / 22) * Math.PI * 2;
+        bulbs.add(V(x + Math.cos(t) * rad * 1.12, h * 0.45, z + Math.sin(t) * rad * 1.12), a % 2 === 0 ? C.gold : C.warm, 1.1);
+      }
+      beacons.add(V(x, h + 0.5, z), C.gold, 1.4);
+    };
+
+    createFramingPavilion(-24, -8, '#582c88', 7.5, 8.5); // Left striped pavilion
+    createFramingPavilion(24, -8, '#2a3b8f', 7.5, 8.5);  // Right striped pavilion
+
+    /* ---- realistic festival crowd & roller coaster spectators (matching user reference) ---- */
+    const CROWD_DEFS = [
+      // 0..3: Spectators & festival attendees looking at coaster/carnival (100% clean transparent cutouts)
+      { url: '/assets/crowd/spectator_guy_hoodie_back.png', w: 0.77, h: 2.05, isSpectator: true },
+      { url: '/assets/crowd/spectator_couple_phone_back.png', w: 1.52, h: 2.05, isSpectator: true },
+      { url: '/assets/crowd/spectator_couple_pointing_back.png', w: 1.27, h: 2.05, isSpectator: true },
+      { url: '/assets/crowd/spectator_pair_photo_back.png', w: 1.25, h: 2.05, isSpectator: true },
+      
+      // 4..10: Exact characters from user people reference
+      { url: '/assets/crowd/ref_guy_backpack_walking.png', w: 0.72, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/ref_pair_girls_festive.png', w: 0.70, h: 2.02, isSpectator: false },
+      { url: '/assets/crowd/ref_girl_yellow_dress.png', w: 0.94, h: 1.95, isSpectator: false },
+      { url: '/assets/crowd/ref_girl_denim_white.png', w: 0.70, h: 2.00, isSpectator: false },
+      { url: '/assets/crowd/ref_guy_red_hoodie.png', w: 0.70, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/ref_trio_guys_chatting.png', w: 2.00, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/ref_lawn_trio_circle.png', w: 2.92, h: 1.40, isLawn: true },
+
+      // 11..23: Additional festival attendees walking and chatting
+      { url: '/assets/crowd/crowd_walk_girl_denim.png', w: 0.75, h: 2.00, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_guy_backpack.png', w: 0.76, h: 2.02, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_girl_yellow.png', w: 0.98, h: 1.95, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_girl_white.png', w: 0.94, h: 1.95, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_guy_hoodie.png', w: 0.95, h: 2.00, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_guy_jacket.png', w: 0.95, h: 2.00, isSpectator: false },
+      { url: '/assets/crowd/crowd_walk_guy_varsity.png', w: 0.98, h: 2.00, isSpectator: false },
+      { url: '/assets/crowd/crowd_pair_friends.png', w: 1.35, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/crowd_pair_girls.png', w: 1.30, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/crowd_trio_phones.png', w: 1.60, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/crowd_couple_walking.png', w: 1.35, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/crowd_pair_chatting_1.png', w: 1.55, h: 2.05, isSpectator: false },
+      { url: '/assets/crowd/crowd_pair_chatting_2.png', w: 1.45, h: 2.05, isSpectator: false }
+    ];
+
+    const REF_WALKER = 4;
+    const REF_GIRLS_PAIR = 5;
+    const REF_GIRL_YELLOW = 6;
+    const REF_GIRL_DENIM = 7;
+    const REF_GUY_HOODIE = 8;
+    const REF_TRIO_GUYS = 9;
+    const REF_LAWN_TRIO = 10;
+
+    const crowdLoadedMats = CROWD_DEFS.map(def => {
+      const tex = crowdTexLoader.load(def.url);
+      return {
+        mat: new THREE.MeshStandardMaterial({
+          map: tex,
+          transparent: true,
+          alphaTest: 0.35,
+          roughness: 0.75,
+          metalness: 0.05,
+          emissive: 0x1a140d,
+          emissiveIntensity: 0.35,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        }),
+        geo: new THREE.PlaneGeometry(def.w, def.h),
+        def
+      };
+    });
+
+    const crowdShadowMat = new THREE.MeshBasicMaterial({ color: 0x061108, transparent: true, opacity: 0.48, depthWrite: false });
+    const crowdShadowGeo = new THREE.PlaneGeometry(1.2, 0.6);
+    const lawnShadowGeo = new THREE.PlaneGeometry(3.2, 1.8);
+
+    const crowdMeshes = [];
+
+    const addCrowdPerson = (x, z, defIndex, scale = 1.0) => {
+      const item = crowdLoadedMats[defIndex];
+      const mesh = new THREE.Mesh(item.geo, item.mat);
+      mesh.position.set(x, (item.def.h * scale) / 2, z);
+      mesh.scale.setScalar(scale);
+      scene.add(mesh);
+      crowdMeshes.push(mesh);
+
+      // Oval ground contact shadow
+      const sGeo = item.def.isLawn ? lawnShadowGeo : crowdShadowGeo;
+      const sh = new THREE.Mesh(sGeo, crowdShadowMat);
+      sh.rotation.x = -Math.PI / 2;
+      sh.position.set(x, 0.02, z);
+      sh.scale.setScalar(scale);
+      scene.add(sh);
+
+      return mesh;
+    };
+
+    // 1. Foreground Station Attendees (exact layout matching user reference)
+    // Left side of station platform by the wooden fence
+    addCrowdPerson(-6.8, 5.0, REF_GIRLS_PAIR, 1.05);   // Girl in yellow dress + girl in denim talking
+    addCrowdPerson(-8.2, 6.8, REF_GUY_HOODIE, 1.05);    // Guy in red hoodie with backpack facing girls
+    addCrowdPerson(-7.2, -4.0, 2, 1.00);                // Couple pointing up towards coaster apex
+    addCrowdPerson(-8.6, -11.0, 0, 1.00);               // Spectator in hoodie looking up
+
+    // Center pathway: attendees walking down the path away from camera
+    addCrowdPerson(-1.4, -6.5, REF_WALKER, 1.05);       // Iconic guy in blue shirt with brown backpack
+    addCrowdPerson(1.8, -15.0, REF_WALKER, 0.98);       // Walking down the midway path
+    addCrowdPerson(-2.2, -26.0, REF_WALKER, 0.95);
+
+    // Right side of station platform
+    addCrowdPerson(7.8, 5.5, REF_TRIO_GUYS, 1.05);      // Three college friends laughing and chatting
+    addCrowdPerson(7.0, -3.0, 3, 1.05);                 // Pair taking photo with smartphone
+    addCrowdPerson(8.5, -9.0, 11, 0.98);                // Girl walking
+    addCrowdPerson(6.6, -16.0, 2, 1.00);                // Couple pointing up
+
+    // Grass lawns flanking the station
+    addCrowdPerson(-13.0, -16.0, REF_LAWN_TRIO, 1.05);  // Students sitting cross-legged in a circle with backpacks
+    addCrowdPerson(15.0, -28.0, REF_LAWN_TRIO, 1.00);   // Another picnic group on the lawn
+    addCrowdPerson(-18.0, -55.0, REF_LAWN_TRIO, 0.95);
+
+    // 2. Spectators lining the coaster fence along the track, cheering the ride
+    for (let i = 4; i < N - 6; i += 2) {
+      const hl = Math.hypot(R[i].x, R[i].z) || 1;
+      [-1, 1].forEach(side => {
+        if (rng() < 0.70) {
+          const off = 5.2 + rng() * 3.8;
+          const px = pts[i].x + (R[i].x / hl) * side * off + (rng() - 0.5) * 1.2;
+          const pz = pts[i].z + (R[i].z / hl) * side * off + (rng() - 0.5) * 1.2;
+          const pool = [0, 1, 2, 3, REF_WALKER, REF_GIRLS_PAIR, REF_GIRL_YELLOW, REF_GIRL_DENIM, REF_GUY_HOODIE, REF_TRIO_GUYS, 11, 12, 13, 14, 17, 18, 19, 20];
+          const idx = pool[Math.floor(rng() * pool.length)];
+          addCrowdPerson(px, pz, idx, 0.92 + rng() * 0.18);
+        }
+      });
+    }
+
+    // 3. Festival attendees milling around the carnival lawn and booths
+    for (let k = 0; k < 55; k++) {
+      const a = rng() * Math.PI * 2;
+      const rad = 16 + rng() * 75;
+      const px = Math.cos(a) * rad;
+      const pz = -180 + Math.sin(a) * rad;
+      const pool = [REF_WALKER, REF_GIRLS_PAIR, REF_GIRL_YELLOW, REF_GIRL_DENIM, REF_GUY_HOODIE, REF_TRIO_GUYS, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+      const idx = pool[Math.floor(rng() * pool.length)];
+      addCrowdPerson(px, pz, idx, 0.88 + rng() * 0.22);
+    }
+
+    // 4. Picnic circles relaxing on the festival lawn
+    for (let k = 0; k < 12; k++) {
+      const a = rng() * Math.PI * 2;
+      const rad = 25 + rng() * 65;
+      const px = Math.cos(a) * rad;
+      const pz = -170 + Math.sin(a) * rad;
+      addCrowdPerson(px, pz, REF_LAWN_TRIO, 0.95 + rng() * 0.25);
+    }
+
+    function updateCrowdAndCarnival(t) {
+      const cx = camera.position.x;
+      const cz = camera.position.z;
+      for (let i = 0; i < crowdMeshes.length; i++) {
+        const m = crowdMeshes[i];
+        m.rotation.y = Math.atan2(cx - m.position.x, cz - m.position.z);
+      }
+      wheelGroup.rotation.z = t * 0.08;
+      for (let i = 0; i < gondolas.length; i++) {
+        gondolas[i].rotation.z = -wheelGroup.rotation.z;
+      }
+    }
+
+    /* ---- continuous celebratory fireworks in upper left & right sky (matching reference image) ---- */
+    const NUM_BURSTS = 6;
+    const SPARKS_PER_BURST = 180;
+    const TOTAL_SPARKS = NUM_BURSTS * SPARKS_PER_BURST;
+
+    const fwPos = new Float32Array(TOTAL_SPARKS * 3);
+    const fwCol = new Float32Array(TOTAL_SPARKS * 3);
+    for (let i = 0; i < TOTAL_SPARKS; i++) {
+      fwPos[i * 3 + 1] = -9999;
+    }
+
+    const fwGeo = new THREE.BufferGeometry();
+    const fwPosAttr = new THREE.BufferAttribute(fwPos, 3);
+    const fwColAttr = new THREE.BufferAttribute(fwCol, 3);
+    fwGeo.setAttribute('position', fwPosAttr);
+    fwGeo.setAttribute('color', fwColAttr);
+
+    const fwMat = new THREE.PointsMaterial({
+      size: 9.5,
+      map: glow,
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+      fog: false
+    });
+    const fwPoints = new THREE.Points(fwGeo, fwMat);
+    fwPoints.frustumCulled = false;
+    scene.add(fwPoints);
+
+    const burstSparks = [];
+    const burstOrigins = [
+      { x: -92, y: 114, z: -275 },  // Left Sky: Big red & gold spherical shell matching reference image
+      { x: 96, y: 118, z: -275 },   // Right Sky: Big champagne starburst matching reference image
+      { x: -130, y: 135, z: -330 }, // High Left Sky
+      { x: 135, y: 130, z: -320 },  // High Right Sky
+      { x: -55, y: 140, z: -350 },  // Mid-High Left
+      { x: 60, y: 138, z: -340 }    // Mid-High Right
+    ];
+
+    const FW_PALETTE = [
+      { r: 1.0, g: 0.22, b: 0.32 }, // Vivid Red Shell (left burst in reference image)
+      { r: 1.0, g: 0.96, b: 0.88 }, // Champagne Starburst (right burst in reference image)
+      { r: 1.0, g: 0.85, b: 0.28 }, // Golden Willow (warm gold in reference image)
+      { r: 1.0, g: 0.65, b: 0.15 }, // Amber Chrysanthemum
+      { r: 1.0, g: 0.35, b: 0.65 }, // Purple/Violet Flash
+      { r: 0.3, g: 0.88, b: 1.0 }   // Electric Cyan Spark
+    ];
+
+    for (let b = 0; b < NUM_BURSTS; b++) {
+      const sparks = [];
+      for (let s = 0; s < SPARKS_PER_BURST; s++) {
+        sparks.push({
+          x: 0, y: -9999, z: 0,
+          vx: 0, vy: 0, vz: 0,
+          r: 1, g: 0.8, b: 0.3,
+          life: 0, maxLife: 1.8
+        });
+      }
+      burstSparks.push({
+        sparks,
+        timer: b * 0.4,
+        origin: burstOrigins[b],
+        color: FW_PALETTE[b % FW_PALETTE.length]
+      });
+    }
+
+    function detonateBurst(burst) {
+      const o = burst.origin;
+      const c = burst.color;
+      const ox = o.x + (rng() - 0.5) * 35;
+      const oy = o.y + (rng() - 0.5) * 25;
+      const oz = o.z + (rng() - 0.5) * 35;
+
+      const num = burst.sparks.length;
+      for (let s = 0; s < num; s++) {
+        const p = burst.sparks[s];
+        p.x = ox; p.y = oy; p.z = oz;
+
+        const phi = Math.acos(1 - 2 * (s + 0.5) / num);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * s;
+        const speed = 28 + (s % 7) * 4.5 + Math.random() * 8;
+
+        p.vx = speed * Math.sin(phi) * Math.cos(theta);
+        p.vy = speed * Math.cos(phi);
+        p.vz = speed * Math.sin(phi) * Math.sin(theta);
+
+        p.r = c.r; p.g = c.g; p.b = c.b;
+        p.maxLife = 1.4 + Math.random() * 0.5;
+        p.life = p.maxLife;
+      }
+    }
+
+    burstSparks.forEach(b => detonateBurst(b));
+
+    function updateFireworks(dt, t) {
+      let offset = 0;
+      for (let b = 0; b < NUM_BURSTS; b++) {
+        const burst = burstSparks[b];
+        burst.timer += dt;
+        if (burst.timer > 1.9) {
+          burst.timer = 0;
+          burst.color = FW_PALETTE[Math.floor(Math.random() * FW_PALETTE.length)];
+          detonateBurst(burst);
+        }
+
+        const sparks = burst.sparks;
+        for (let s = 0; s < sparks.length; s++) {
+          const p = sparks[s];
+          const idx = offset + s;
+          if (p.life > 0) {
+            p.life -= dt;
+            p.vx *= 0.94;
+            p.vy = p.vy * 0.94 - 9.8 * dt;
+            p.vz *= 0.94;
+
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.z += p.vz * dt;
+
+            const alpha = Math.max(0, p.life / p.maxLife);
+            const twinkle = alpha < 0.5 ? (0.6 + 0.4 * Math.sin(t * 30 + s * 7)) : 1.0;
+
+            fwPos[idx * 3] = p.x;
+            fwPos[idx * 3 + 1] = p.y;
+            fwPos[idx * 3 + 2] = p.z;
+
+            fwCol[idx * 3] = p.r * alpha * twinkle;
+            fwCol[idx * 3 + 1] = p.g * alpha * twinkle;
+            fwCol[idx * 3 + 2] = p.b * alpha * twinkle;
+          } else {
+            fwPos[idx * 3 + 1] = -9999;
+          }
+        }
+        offset += sparks.length;
+      }
+
+      fwPosAttr.needsUpdate = true;
+      fwColAttr.needsUpdate = true;
     }
 
     scene.add(membersMesh(members, supMat));
@@ -971,7 +1758,21 @@ function initializeMidwayNights() {
     }
     function resize(w, h) { camera.aspect = w / h; baseFov = w / h < 1 ? 78 : 62; camera.updateProjectionMatrix(); }
 
-    return { scene, camera, setRide, resize, dispose: () => disposeScene(scene) };
+    return {
+      scene,
+      camera,
+      setRide,
+      resize,
+      update: (t, dt) => {
+        updateFireworks(dt, t);
+        updateCrowdAndCarnival(t);
+      },
+      dispose: () => {
+        if (fwGeo) fwGeo.dispose();
+        if (fwMat) fwMat.dispose();
+        disposeScene(scene);
+      }
+    };
   }
 
   /* =====================================================================
@@ -1019,12 +1820,17 @@ function initializeMidwayNights() {
       world.resize(W, H);
       measure();
     }
+    let lastDrawT = 0;
     function draw(t, still) {
+      const dt = clamp(lastDrawT > 0 ? t - lastDrawT : 0.016, 0.001, 0.05);
+      lastDrawT = t;
+      if (world && world.update && !still) {
+        world.update(t, dt);
+      }
       renderer.setScissorTest(false);
       renderer.setViewport(0, 0, W, H);
       renderer.clear();
       renderer.render(world.scene, world.camera);
-
     }
 
     /* ---- static layout: reduced motion, or no WebGL/libraries ---- */
