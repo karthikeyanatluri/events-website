@@ -34,3 +34,4 @@ dist-ssr
 scratch/
 __pycache__/
 *.pyc
+src/assets/assets/

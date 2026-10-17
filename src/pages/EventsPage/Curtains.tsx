@@ -12,8 +12,8 @@ import styles from "./Curtains.module.scss";
    Used between the Tickets page and a school's tents.
 ========================================================= */
 
-export const CURTAIN_CLOSE_MS = 750;
-export const CURTAIN_OPEN_MS = 1100;
+export const CURTAIN_CLOSE_MS = 550;
+export const CURTAIN_OPEN_MS = 750;
 
 interface CurtainsProps {
     state: "closing" | "opening";

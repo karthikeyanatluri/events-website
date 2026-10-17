@@ -4,6 +4,8 @@ import "./Nav.scss";
 
 export default function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
   const location = useLocation();
 
   // Close menu when route changes
@@ -20,6 +22,31 @@ export default function Nav() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 3600);
+  };
+
+  const handleDummyRegister = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    const passNum = Math.floor(1000 + Math.random() * 9000);
+    showToast(`🎟️ Demo Pass #SP27-${passNum} Confirmed! Welcome to SUPRAGNA 2K27.`);
+  };
+
+  const handleDummyAbout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    showToast("🎪 SUPRAGNA 2K27 • The Annual Grand Tech & Carnival Fest (6–8 Nov).");
+  };
+
+  const handleDummyContact = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    showToast("📬 Contact Desk: support@supragna2k27.edu • Info Counter Open Daily.");
+  };
+
   return (
     <header className="carnival-nav-header">
       <Link className="brand" to="/events" aria-label="Events Home">
@@ -29,15 +56,20 @@ export default function Nav() {
 
       {/* Desktop / Tablet Navigation Links */}
       <nav className="nav-links desktop-only" aria-label="Primary Navigation">
-        <Link className="btn primary small" to="#" onClick={(e) => e.preventDefault()}>
+        <button
+          className="btn primary small"
+          type="button"
+          onClick={handleDummyRegister}
+          title="Demo Registration Pass"
+        >
           Register
-        </Link>
-        <Link className="nav-link" to="#" onClick={(e) => e.preventDefault()}>
+        </button>
+        <button className="nav-link" type="button" onClick={handleDummyAbout} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           About Us
-        </Link>
-        <Link className="nav-link" to="#" onClick={(e) => e.preventDefault()}>
+        </button>
+        <button className="nav-link" type="button" onClick={handleDummyContact} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           Contact Us
-        </Link>
+        </button>
       </nav>
 
       {/* Mobile Hamburger Toggle Button */}
@@ -59,28 +91,35 @@ export default function Nav() {
         aria-hidden={!mobileMenuOpen}
       >
         <div className="mobile-menu-inner">
-          <Link
+          <button
             className="btn primary small mobile-reg-btn"
-            to="#"
-            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
+            type="button"
+            onClick={handleDummyRegister}
           >
             Register
-          </Link>
-          <Link
+          </button>
+          <button
             className="mobile-nav-link"
-            to="#"
-            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
+            type="button"
+            onClick={handleDummyAbout}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             About Us
-          </Link>
-          <Link
+          </button>
+          <button
             className="mobile-nav-link"
-            to="#"
-            onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }}
+            type="button"
+            onClick={handleDummyContact}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Contact Us
-          </Link>
+          </button>
         </div>
+      </div>
+
+      {/* Feedback Toast */}
+      <div className={`nav-toast ${toastVisible ? "show" : ""}`} role="status">
+        {toastMsg}
       </div>
     </header>
   );

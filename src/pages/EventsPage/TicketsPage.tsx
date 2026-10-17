@@ -53,10 +53,10 @@ const TICKETS: Record<string, { art: string; x: number; y: number; w: number }> 
             then open there (EventsPage)
 ========================================================= */
 
-const STAMP_AT = 260;
-const TEAR_AT = 760;
-const CURTAIN_AT = 1350;
-const GO_AT = CURTAIN_AT + CURTAIN_CLOSE_MS + 120;
+const STAMP_AT = 180;
+const TEAR_AT = 480;
+const CURTAIN_AT = 820;
+const GO_AT = CURTAIN_AT + CURTAIN_CLOSE_MS + 60;
 
 // the perforation sits just left of the arrow button (as a
 // fraction of the ticket's width); the stub is everything right
@@ -79,7 +79,13 @@ function tearPath(side: "main" | "stub") {
 }
 
 function prefersReducedMotion() {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try {
+        return typeof window !== "undefined" && typeof window.matchMedia === "function"
+            ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            : false;
+    } catch (_) {
+        return false;
+    }
 }
 
 /* =========================================================

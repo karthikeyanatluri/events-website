@@ -6,22 +6,78 @@ import "./MidwayNights.scss";
 
 type ScriptWindow = Window & { __midwayNightsCleanup?: () => void };
 
+const LIB_SOURCES = {
+  three: [
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js",
+    "https://unpkg.com/three@0.128.0/build/three.min.js"
+  ],
+  gsap: [
+    "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js",
+    "https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js",
+    "https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"
+  ],
+  scrollTrigger: [
+    "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js",
+    "https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js",
+    "https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js"
+  ]
+};
+
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[data-midway-dependency="${src}"]`);
+    const existing = document.querySelector<HTMLScriptElement>(`script[data-midway-dependency="${src}"], script[src="${src}"]`);
     if (existing?.dataset.loaded === "true") { resolve(); return; }
+
     const script = existing ?? document.createElement("script");
-    const onLoad = () => { script.dataset.loaded = "true"; resolve(); };
-    const onError = () => reject(new Error(`Failed to load ${src}`));
+    let timer = 0;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
+    };
+
+    const onLoad = () => {
+      cleanup();
+      script.dataset.loaded = "true";
+      resolve();
+    };
+
+    const onError = () => {
+      cleanup();
+      reject(new Error(`Failed to load ${src}`));
+    };
+
     script.addEventListener("load", onLoad, { once: true });
     script.addEventListener("error", onError, { once: true });
+
+    // 4s timeout per CDN to gracefully try fallbacks if a network stalls
+    timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timeout loading ${src}`));
+    }, 4000);
+
     if (!existing) {
       script.src = src;
-      script.async = false;
+      script.async = true;
       script.dataset.midwayDependency = src;
       document.head.appendChild(script);
     }
   });
+}
+
+async function loadLibrary(urls: string[], isReady: () => boolean): Promise<boolean> {
+  if (isReady()) return true;
+  for (const url of urls) {
+    try {
+      await loadScript(url);
+      if (isReady()) return true;
+    } catch (_) {
+      // Try next CDN fallback
+    }
+  }
+  return isReady();
 }
 
 export default function MidwayNights() {
@@ -46,24 +102,38 @@ export default function MidwayNights() {
     let cancelled = false;
     const win = window as ScriptWindow;
 
+    // Phase 1: Immediately initialize DOM cards, styles, dialogs, and static fallback
+    // This runs synchronously in <1ms so no device ever sees a blank screen!
+    try {
+      initializeMidwayNights();
+    } catch (e) {
+      console.error("MidwayNights DOM init error:", e);
+    }
+
+    // Phase 2: Progressively load 3D animation libraries and boot the roller coaster
     const start = async () => {
       try {
-        if ((window as any).THREE && (window as any).gsap && (window as any).ScrollTrigger) {
-          if (cancelled) return;
-          initializeMidwayNights();
-          return;
+        if (!((window as any).THREE && (window as any).gsap && (window as any).ScrollTrigger)) {
+          await Promise.all([
+            loadLibrary(LIB_SOURCES.three, () => !!(window as any).THREE),
+            loadLibrary(LIB_SOURCES.gsap, () => !!(window as any).gsap)
+          ]);
+          if ((window as any).gsap && !(window as any).ScrollTrigger) {
+            await loadLibrary(LIB_SOURCES.scrollTrigger, () => !!(window as any).ScrollTrigger);
+          }
         }
-        await Promise.all([
-          (window as any).THREE ? Promise.resolve() : loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"),
-          (window as any).gsap ? Promise.resolve() : loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js")
-        ]);
-        if (!(window as any).ScrollTrigger) {
-          await loadScript("https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js");
-        }
-        if (cancelled) return;
-        initializeMidwayNights();
       } catch (error) {
-        console.error("Events could not initialize its animation libraries.", error);
+        console.warn("Animation libraries loading completed with fallback:", error);
+      } finally {
+        if (!cancelled) {
+          try {
+            if (typeof (win as any).__midwayNightsBoot3D === 'function') {
+              (win as any).__midwayNightsBoot3D();
+            }
+          } catch (initErr) {
+            console.error("3D coaster boot fallback error:", initErr);
+          }
+        }
       }
     };
 
@@ -130,7 +200,8 @@ export default function MidwayNights() {
             <dl className="meta" id="sheetMeta"></dl>
             <p id="sheetText"></p>
             <div className="actions">
-              <button className="btn primary" id="sheetClose" type="button">Close</button>
+              <button className="btn primary" id="sheetRegister" type="button" data-register>Register (Demo Pass)</button>
+              <button className="btn ghost" id="sheetClose" type="button">Close</button>
             </div>
           </div>
         </div>
@@ -139,20 +210,20 @@ export default function MidwayNights() {
       <dialog id="register" className="sheet info-sheet" aria-labelledby="regModalTitle">
         <div className="sheet-card">
           <div className="sheet-body">
-            <p className="chip">SUPRAGNA 2K27 • Registration</p>
+            <p className="chip">SUPRAGNA 2K27 • Demo Pass Generator</p>
             <h2 id="regModalTitle">Register for SUPRAGNA 2K27</h2>
             <p className="sheet-sub">
-              Secure your spot for departmental hackathons, technical challenges, and live carnival attractions.
+              Instant demo pass registration for departmental challenges, technical hackathons, and midway rides.
             </p>
             <form id="regForm" className="sheet-form">
               <div className="form-group">
                 <label htmlFor="regName">Full Name</label>
-                <input type="text" id="regName" placeholder="e.g. Alex Morgan" required />
+                <input type="text" id="regName" placeholder="e.g. Alex Morgan" defaultValue="Guest Student" />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="regEmail">Email Address</label>
-                  <input type="email" id="regEmail" placeholder="alex@university.edu" required />
+                  <input type="email" id="regEmail" placeholder="alex@university.edu" defaultValue="guest.student@supragna2k27.edu" />
                 </div>
                 <div className="form-group">
                   <label htmlFor="regDept">Select Department</label>
@@ -171,13 +242,13 @@ export default function MidwayNights() {
               <div className="form-group">
                 <label htmlFor="regPassType">Pass Type</label>
                 <select id="regPassType">
-                  <option value="single">Single Event Entry — Free / Nominal</option>
-                  <option value="carnival">All-Access Carnival Wristband — ₹499</option>
-                  <option value="hackathon">Hackathon &amp; Tech Dual Pass — ₹299</option>
+                  <option value="carnival">All-Access Carnival Wristband — Free Demo Pass</option>
+                  <option value="single">Single Department Entry — Free</option>
+                  <option value="hackathon">Hackathon &amp; Tech Dual Pass — Free Demo</option>
                 </select>
               </div>
               <div className="actions">
-                <button className="btn primary" type="submit" id="regSubmit">Confirm Registration</button>
+                <button className="btn primary" type="submit" id="regSubmit">Confirm Registration (Demo Pass)</button>
                 <button className="btn ghost" type="button" id="regClose">Close</button>
               </div>
             </form>
@@ -272,6 +343,76 @@ function initializeMidwayNights() {
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
+
+  function setInert(el, value) {
+    if (!el) return;
+    try {
+      if ('inert' in el) {
+        el.inert = value;
+      } else {
+        if (value) el.setAttribute('inert', '');
+        else el.removeAttribute('inert');
+      }
+    } catch (_) {}
+  }
+
+  function addMediaListener(mql, fn) {
+    if (!mql) return;
+    try {
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', fn);
+      } else if (typeof mql.addListener === 'function') {
+        mql.addListener(fn);
+      }
+    } catch (_) {}
+  }
+
+  function removeMediaListener(mql, fn) {
+    if (!mql) return;
+    try {
+      if (typeof mql.removeEventListener === 'function') {
+        mql.removeEventListener('change', fn);
+      } else if (typeof mql.removeListener === 'function') {
+        mql.removeListener(fn);
+      }
+    } catch (_) {}
+  }
+
+  function openSheet(dialog) {
+    if (!dialog) return;
+    try {
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+        return;
+      }
+    } catch (_) {}
+    dialog.setAttribute('open', '');
+  }
+
+  function closeSheet(dialog) {
+    if (!dialog) return;
+    try {
+      if (typeof dialog.close === 'function') {
+        dialog.close();
+      }
+    } catch (_) {}
+    dialog.removeAttribute('open');
+    if (typeof window !== 'undefined' && window.location.hash) {
+      try {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      } catch (_) {}
+    }
+  }
+
+  function isWebGLAvailable() {
+    try {
+      if (typeof window === 'undefined' || !window.WebGLRenderingContext) return false;
+      const testCanvas = document.createElement('canvas');
+      return !!(testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl'));
+    } catch (_) {
+      return false;
+    }
+  }
 
   /* The department tent page links here with ?tent=<slug>&color=<hex>.
      Palette colors intentionally follow the exact tent colors for all schools. */
@@ -448,6 +589,7 @@ function initializeMidwayNights() {
   const showcase = $('#showcase');
   const cardsEl = $('#cards');
   const stopsEl = $('#stops');
+  if (!cardsEl || !stopsEl || !showcase) return;
   cardsEl.innerHTML = '';
   stopsEl.innerHTML = '';
   const nowN = $('#nowN'), nowT = $('#nowT'), fillEl = $('#fill'), liveEl = $('#live'), heroEl = $('#hero');
@@ -483,7 +625,7 @@ function initializeMidwayNights() {
       art.dataset.eventId = ev.id;
       art.setAttribute('data-event-id', ev.id);
       art.setAttribute('aria-label', ev.title || ev.name);
-      art.inert = true;
+      setInert(art, true);
       const dateText = ev.date ? esc(ev.date) : 'TBA';
       const timeText = ev.time ? esc(ev.time) : 'TBA';
       const venueText = ev.venue ? esc(ev.venue) : 'TBA';
@@ -513,6 +655,7 @@ function initializeMidwayNights() {
          </div>
          <div class="actions">
            <button class="btn primary" type="button" data-details="${i}">Details</button>
+           <button class="btn ghost" type="button" data-register data-i="${i}" title="Demo Registration">Register</button>
          </div>
          <div class="marquee bottom" aria-hidden="true"></div>
        </div>`;
@@ -536,13 +679,18 @@ function initializeMidwayNights() {
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3800);
   }
 
+  let currentOpenEventIdx = 0;
   function openEvent(i) {
     const ev = EVENTS[i];
     if (!ev) return;
+    currentOpenEventIdx = i;
     if (CONFIG.onOpenEvent) { CONFIG.onOpenEvent(ev); return; }
     $('#sheetImg').src = ev.image || ev.image_url || poster(i);
     $('#sheetCat').textContent = ev.category || 'Event';
     $('#sheetTitle').textContent = ev.title || ev.name;
+
+    const sheetRegister = $('#sheetRegister');
+    if (sheetRegister) sheetRegister.dataset.i = String(i);
 
     const metaList = [];
     if (ev.departmentId) {
@@ -558,24 +706,19 @@ function initializeMidwayNights() {
     $('#sheetMeta').innerHTML = metaList
       .map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
     $('#sheetText').textContent = ev.details || ev.description || ev.blurb || '';
-    if (typeof sheet.showModal === 'function') sheet.showModal(); else sheet.setAttribute('open', '');
+    openSheet(sheet);
   }
 
   function onRegister(e) {
     const a = e.target.closest('[data-register]');
     if (!a) return;
-    const ev = EVENTS[+a.dataset.i];
-    if (!ev) return;
-    if (CONFIG.onRegister) { e.preventDefault(); CONFIG.onRegister(ev); return; }
-    const href = a.getAttribute('href') || '';
-    if (href === '#' || href.startsWith('#')) {
-      e.preventDefault();
-      if (!ev.registerUrl && !ev.registrationUrl) {
-        toast(`Registrations for ${ev.title || ev.name} will open soon!`);
-      } else {
-        toast(`Registration link for ${ev.title || ev.name}: ${ev.registerUrl || ev.registrationUrl}`);
-      }
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    const evIdx = a.dataset.i !== undefined && a.dataset.i !== '' ? +a.dataset.i : currentOpenEventIdx;
+    const ev = EVENTS[evIdx];
+    const evTitle = ev ? (ev.title || ev.name) : 'SUPRAGNA Attraction';
+    const passNum = Math.floor(1000 + Math.random() * 9000);
+    toast(`🎟️ Demo Pass #SP27-${passNum} Confirmed for "${evTitle}"! Present at entrance.`);
   }
 
   const listeners = [];
@@ -598,11 +741,15 @@ function initializeMidwayNights() {
   on(cardsEl, 'click', e => {
     const d = e.target.closest('[data-details]');
     if (d) { openEvent(+d.dataset.details); return; }
+    const r = e.target.closest('[data-register]');
+    if (r) { onRegister(e); return; }
   });
   if (sheet) on(sheet, 'click', e => {
-    if (e.target === sheet) sheet.close();
+    const r = e.target.closest('[data-register]');
+    if (r) { onRegister(e); return; }
+    if (e.target === sheet) closeSheet(sheet);
   });
-  const sheetCloseBtn = $('#sheetClose'); if (sheetCloseBtn) on(sheetCloseBtn, 'click', () => sheet?.close?.());
+  const sheetCloseBtn = $('#sheetClose'); if (sheetCloseBtn) on(sheetCloseBtn, 'click', () => closeSheet(sheet));
 
   let jumpTo = () => { };
   let finalRedirectTimer = 0;
@@ -631,7 +778,7 @@ function initializeMidwayNights() {
     cardEls.forEach((c, k) => {
       const on_ = k === i;
       c.classList.toggle('is-live', on_);
-      c.inert = !on_;
+      setInert(c, !on_);
     });
     if (i >= 0 && EVENTS[i]) liveEl.textContent = `Stop ${i + 1} of ${N_EV}: ${EVENTS[i].title || EVENTS[i].name}`;
   }
@@ -640,12 +787,15 @@ function initializeMidwayNights() {
      2. THREE.JS CARNIVAL: track, supports, station, attractions, lights, rider camera
      ===================================================================== */
   const TIER = (() => {
-    const small = Math.min(innerWidth, innerHeight) < 700 || matchMedia('(pointer:coarse)').matches;
-    const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
-    const low = small || weak;
+    const isClient = typeof window !== 'undefined';
+    const small = isClient && (Math.min(window.innerWidth || 800, window.innerHeight || 600) < 768 || (typeof matchMedia === 'function' && matchMedia('(pointer:coarse)').matches));
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    const weak = nav && (((nav.hardwareConcurrency || 8) <= 4) || ((nav.deviceMemory || 8) <= 4));
+    const low = !!(small || weak);
+    const dpr = isClient ? Math.min(window.devicePixelRatio || 1, low ? 1.25 : 1.75) : 1;
     return {
-      low, samples: low ? 520 : 900, radial: low ? 4 : 6, dpr: Math.min(window.devicePixelRatio || 1, low ? 1.5 : 2),
-      stars: low ? 240 : 600, props: low ? 0.55 : 1, dust: low ? 280 : 760
+      low, samples: low ? 450 : 850, radial: low ? 4 : 6, dpr,
+      stars: low ? 200 : 550, props: low ? 0.55 : 1, dust: low ? 220 : 650
     };
   })();
 
@@ -657,7 +807,9 @@ function initializeMidwayNights() {
 
   function glowTexture() {
     const c = document.createElement('canvas'); c.width = c.height = 64;
-    const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const g = c.getContext('2d');
+    if (!g) return new THREE.Texture();
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
     gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(c);
@@ -693,58 +845,11 @@ function initializeMidwayNights() {
 
   function stripeTexture(c1, c2, n = 14) {
     const c = document.createElement('canvas'); c.width = 256; c.height = 8;
-    const g = c.getContext('2d'), w = 256 / n;
+    const g = c.getContext('2d');
+    if (!g) return new THREE.Texture();
+    const w = 256 / n;
     for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? c2 : c1; g.fillRect(i * w, 0, w + 1, 8); }
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return t;
-  }
-
-  function createSkyscraperTexture() {
-    const c = document.createElement('canvas');
-    c.width = 512;
-    c.height = 512;
-    const ctx = c.getContext('2d');
-    if (!ctx) return new THREE.CanvasTexture(c);
-
-    // Deep architectural night facade
-    ctx.fillStyle = '#080a16';
-    ctx.fillRect(0, 0, 512, 512);
-
-    // Vertical structural mullions
-    ctx.fillStyle = '#0f1424';
-    for (let x = 0; x < 512; x += 32) {
-      ctx.fillRect(x, 0, 4, 512);
-    }
-
-    // Windows with warm gold, amber, and office white illumination
-    const winColors = [
-      '#ffeaa7', // Warm incandescent gold
-      '#ffd166', // Amber glow
-      '#ffffff', // Bright white office
-      '#e3f2fd', // Soft cool white
-      '#ffbe76', // Soft candle amber
-      '#0e1224', // Unlit dark window
-      '#0e1224',
-      '#0e1224',
-      '#080a14'
-    ];
-
-    for (let y = 14; y < 504; y += 14) {
-      // Horizontal floor shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.fillRect(0, y + 10, 512, 4);
-
-      for (let x = 6; x < 506; x += 16) {
-        if ((x % 32) < 4) continue;
-        const col = winColors[Math.floor(Math.random() * winColors.length)];
-        ctx.fillStyle = col;
-        ctx.fillRect(x, y, 9, 8);
-      }
-    }
-
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    return tex;
   }
 
   function disposeScene(scene) {
@@ -1115,38 +1220,9 @@ function initializeMidwayNights() {
     }
     scene.add(dust.build(glow, 0.55, 0.7));
 
-    /* ---- realistic illuminated city skyline & natural park tree canopy line (matching reference image) ---- */
+    /* ---- crowd texture loader (buildings background removed) ---- */
     const crowdTexLoader = new THREE.TextureLoader();
-    const panoTex = crowdTexLoader.load('/assets/realistic_city_panorama.png');
-    panoTex.wrapS = THREE.RepeatWrapping;
-    panoTex.repeat.set(3, 1);
 
-    // Curved panoramic horizon backdrop spanning behind the carnival
-    const panoGeo = new THREE.CylinderGeometry(450, 450, 200, 48, 1, true, -Math.PI * 0.85, Math.PI * 1.7);
-    const panoMat = new THREE.MeshBasicMaterial({
-      map: panoTex,
-      side: THREE.BackSide,
-      transparent: true,
-      depthWrite: false,
-      fog: false
-    });
-    const panoMesh = new THREE.Mesh(panoGeo, panoMat);
-    panoMesh.position.set(0, 90, -180);
-    scene.add(panoMesh);
-
-    // Deep architectural spires and aviation safety beacons rising above the skyline
-    const spireCoords = [
-      { x: -140, z: -460, h: 145 },
-      { x: -85,  z: -490, h: 165 },
-      { x: -30,  z: -470, h: 180 },
-      { x: 35,   z: -480, h: 175 },
-      { x: 90,   z: -460, h: 155 },
-      { x: 150,  z: -450, h: 140 }
-    ];
-    spireCoords.forEach(sp => {
-      members.push([V(sp.x, 0, sp.z), V(sp.x, sp.h, sp.z), 0.35]);
-      beacons.add(V(sp.x, sp.h + 0.6, sp.z), new THREE.Color(0xff2222), 1.8);
-    });
 
     // Realistic organic park trees with tapered trunks and multi-layered faceted foliage crowns
     const trunkMat = new THREE.MeshStandardMaterial({
@@ -1162,31 +1238,41 @@ function initializeMidwayNights() {
     }));
     const treeShadowMat = new THREE.MeshBasicMaterial({ color: 0x050e07, transparent: true, opacity: 0.45, depthWrite: false });
 
+    // Shared unit geometries to minimize GPU memory and draw overhead on mobile
+    const unitTrunkGeo = new THREE.CylinderGeometry(0.35, 0.65, 1, 7);
+    const unitFoliageGeo = new THREE.IcosahedronGeometry(1, 1);
+    const unitTreeShadowGeo = new THREE.PlaneGeometry(9, 9);
+
     function createRealisticParkTree(x, z, scale = 1.0) {
       const g = new THREE.Group();
       g.position.set(x, 0, z);
       g.scale.setScalar(scale);
 
       const trunkH = 7 + rng() * 5;
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.65, trunkH, 7), trunkMat);
+      const trunk = new THREE.Mesh(unitTrunkGeo, trunkMat);
       trunk.position.y = trunkH / 2;
+      trunk.scale.set(1, trunkH, 1);
       g.add(trunk);
 
       const numClusters = 4 + Math.floor(rng() * 3);
       for (let c = 0; c < numClusters; c++) {
         const fMat = foliageMats[Math.floor(rng() * foliageMats.length)];
         const clusterR = 3.8 + rng() * 3.2;
-        const cluster = new THREE.Mesh(new THREE.IcosahedronGeometry(clusterR, 1), fMat);
+        const cluster = new THREE.Mesh(unitFoliageGeo, fMat);
         const cy = trunkH * 0.72 + (c / numClusters) * 7.5 + (rng() - 0.5) * 1.5;
         const cx = (rng() - 0.5) * 4.2;
         const cz = (rng() - 0.5) * 4.2;
         cluster.position.set(cx, cy, cz);
-        cluster.scale.set(1.0 + (rng() - 0.5) * 0.25, 0.9 + (rng() - 0.5) * 0.25, 1.0 + (rng() - 0.5) * 0.25);
+        cluster.scale.set(
+          clusterR * (1.0 + (rng() - 0.5) * 0.25),
+          clusterR * (0.9 + (rng() - 0.5) * 0.25),
+          clusterR * (1.0 + (rng() - 0.5) * 0.25)
+        );
         cluster.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
         g.add(cluster);
       }
 
-      const sh = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), treeShadowMat);
+      const sh = new THREE.Mesh(unitTreeShadowGeo, treeShadowMat);
       sh.rotation.x = -Math.PI / 2;
       sh.position.y = 0.02;
       g.add(sh);
@@ -1195,9 +1281,10 @@ function initializeMidwayNights() {
       return g;
     }
 
-    // 1. Natural perimeter forest tree line framing the carnival park
-    for (let k = 0; k < 55; k++) {
-      const a = (k / 55) * Math.PI * 2;
+    // 1. Natural perimeter forest tree line framing the carnival park (scaled for device capability)
+    const treePerimeterCount = Math.round(55 * TIER.props);
+    for (let k = 0; k < treePerimeterCount; k++) {
+      const a = (k / Math.max(1, treePerimeterCount)) * Math.PI * 2;
       const rr = 210 + rng() * 45;
       const tx = Math.cos(a) * rr;
       const tz = -190 + Math.sin(a) * rr;
@@ -1205,7 +1292,8 @@ function initializeMidwayNights() {
     }
 
     // 2. Midground copses of trees around the carnival lawn and midway
-    for (let k = 0; k < 22; k++) {
+    const treeMidgroundCount = Math.round(22 * TIER.props);
+    for (let k = 0; k < treeMidgroundCount; k++) {
       const a = rng() * Math.PI * 2;
       const rr = 45 + rng() * 110;
       const tx = Math.cos(a) * rr;
@@ -1534,10 +1622,11 @@ function initializeMidwayNights() {
     addCrowdPerson(-18.0, -55.0, REF_LAWN_TRIO, 0.95);
 
     // 2. Spectators lining the coaster fence along the track, cheering the ride
-    for (let i = 4; i < N - 6; i += 2) {
+    const trackStep = TIER.low ? 5 : 2;
+    for (let i = 4; i < N - 6; i += trackStep) {
       const hl = Math.hypot(R[i].x, R[i].z) || 1;
       [-1, 1].forEach(side => {
-        if (rng() < 0.70) {
+        if (rng() < (TIER.low ? 0.55 : 0.70)) {
           const off = 5.2 + rng() * 3.8;
           const px = pts[i].x + (R[i].x / hl) * side * off + (rng() - 0.5) * 1.2;
           const pz = pts[i].z + (R[i].z / hl) * side * off + (rng() - 0.5) * 1.2;
@@ -1549,7 +1638,8 @@ function initializeMidwayNights() {
     }
 
     // 3. Festival attendees milling around the carnival lawn and booths
-    for (let k = 0; k < 55; k++) {
+    const millingCount = Math.round(55 * TIER.props);
+    for (let k = 0; k < millingCount; k++) {
       const a = rng() * Math.PI * 2;
       const rad = 16 + rng() * 75;
       const px = Math.cos(a) * rad;
@@ -1560,7 +1650,8 @@ function initializeMidwayNights() {
     }
 
     // 4. Picnic circles relaxing on the festival lawn
-    for (let k = 0; k < 12; k++) {
+    const lawnCount = Math.round(12 * TIER.props);
+    for (let k = 0; k < lawnCount; k++) {
       const a = rng() * Math.PI * 2;
       const rad = 25 + rng() * 65;
       const px = Math.cos(a) * rad;
@@ -1756,7 +1847,13 @@ function initializeMidwayNights() {
       camera.updateProjectionMatrix();
       skyGroup.position.copy(camera.position);
     }
-    function resize(w, h) { camera.aspect = w / h; baseFov = w / h < 1 ? 78 : 62; camera.updateProjectionMatrix(); }
+    function resize(w, h) {
+      const sw = Math.max(1, w || 1);
+      const sh = Math.max(1, h || 1);
+      camera.aspect = sw / sh;
+      baseFov = sw / sh < 1 ? 78 : 62;
+      camera.updateProjectionMatrix();
+    }
 
     return {
       scene,
@@ -1768,6 +1865,9 @@ function initializeMidwayNights() {
         updateCrowdAndCarnival(t);
       },
       dispose: () => {
+        try { unitTrunkGeo?.dispose?.(); } catch (_) {}
+        try { unitFoliageGeo?.dispose?.(); } catch (_) {}
+        try { unitTreeShadowGeo?.dispose?.(); } catch (_) {}
         if (fwGeo) fwGeo.dispose();
         if (fwMat) fwMat.dispose();
         disposeScene(scene);
@@ -1778,7 +1878,7 @@ function initializeMidwayNights() {
   /* =====================================================================
      Scroll controller: carnival coaster scene only (Ferris wheel removed).
      ===================================================================== */
-  const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  const reduceMQ = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false, addEventListener: () => {}, removeEventListener: () => {} };
   const A_START = -2.2, A_END = Math.max(0, N_EV - 1);
   const BEATS = Math.max(1, A_END - A_START);     // finish with the final event card centered and interactive
   const FINAL_VIEW_MS = 10000;
@@ -1786,42 +1886,57 @@ function initializeMidwayNights() {
   function boot() {
     const canvas = $('#gl');
     const offs = [];
-    const listen = (t, ty, fn, o) => { t.addEventListener(ty, fn, o); offs.push(() => t.removeEventListener(ty, fn, o)); };
-    const hasLibs = !!(window.THREE && window.gsap && window.ScrollTrigger);
+    const listen = (t, ty, fn, o) => { if (t) { t.addEventListener(ty, fn, o); offs.push(() => t.removeEventListener(ty, fn, o)); } };
+    const hasLibs = !!((window as any).THREE && (window as any).gsap && (window as any).ScrollTrigger);
     const motion = hasLibs && !reduceMQ.matches;
     let renderer = null, world = null;
 
-    if (hasLibs) {
+    if (hasLibs && canvas && isWebGLAvailable()) {
       try {
         initThreeHelpers();
-        renderer = new THREE.WebGLRenderer({ canvas, antialias: !TIER.low, powerPreference: 'high-performance' });
-        renderer.setPixelRatio(TIER.dpr); renderer.autoClear = false; renderer.setClearColor(0x0a0620, 1);
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: !TIER.low,
+          powerPreference: TIER.low ? 'default' : 'high-performance',
+          failIfMajorPerformanceCaveat: false,
+          depth: true,
+          stencil: false
+        });
+        renderer.setPixelRatio(TIER.dpr);
+        renderer.autoClear = false;
+        renderer.setClearColor(0x0a0620, 1);
         world = buildCarnival();
       } catch (err) {
-        console.warn('3D scene unavailable, showing the static layout.', err);
-        if (renderer) renderer.dispose();
+        console.warn('3D scene unavailable on this device, showing the accessible static layout.', err);
+        if (renderer) {
+          try { renderer.dispose(); } catch (_) {}
+        }
         renderer = null; world = null;
       }
     }
-    const useMotion = motion && !!renderer;
+    const useMotion = motion && !!renderer && !!world;
 
     /* ---- sizing ---- */
     let W = 1, H = 1, vw = 1, vh = 1, fit = 1, prog = 0;
     const vis = new Array(N_EV).fill(false), nearArr = new Array(N_EV).fill(false);
     function measure() {
-      vw = showcase.clientWidth; vh = showcase.clientHeight;
+      if (!showcase) return;
+      vw = showcase.clientWidth || window.innerWidth || 1;
+      vh = showcase.clientHeight || window.innerHeight || 1;
       let mh = 0; cardEls.forEach(c => { mh = Math.max(mh, c.offsetHeight); });
       fit = clamp((vh - 150) / (mh || 1), 0.55, 1);
     }
     function resize() {
-      if (!renderer) return;
-      W = canvas.clientWidth || innerWidth; H = canvas.clientHeight || innerHeight;
+      if (!renderer || !world) return;
+      W = (canvas && canvas.clientWidth) || window.innerWidth || 1;
+      H = (canvas && canvas.clientHeight) || window.innerHeight || 1;
       renderer.setSize(W, H, false);
       world.resize(W, H);
       measure();
     }
     let lastDrawT = 0;
     function draw(t, still) {
+      if (!renderer || !world) return;
       const dt = clamp(lastDrawT > 0 ? t - lastDrawT : 0.016, 0.001, 0.05);
       lastDrawT = t;
       if (world && world.update && !still) {
@@ -1835,28 +1950,45 @@ function initializeMidwayNights() {
 
     /* ---- static layout: reduced motion, or no WebGL/libraries ---- */
     if (!useMotion) {
-      showcase.classList.add('is-static');
-      cardEls.forEach(c => { c.removeAttribute('style'); c.inert = false; c.classList.add('near'); });
-      heroEl.removeAttribute('style');
-      if (renderer) {
+      if (showcase) showcase.classList.add('is-static');
+      cardEls.forEach(c => {
+        c.removeAttribute('style');
+        setInert(c, false);
+        c.classList.add('near', 'is-live');
+        c.style.visibility = 'visible';
+        c.style.opacity = '1';
+        c.style.pointerEvents = 'auto';
+      });
+      if (heroEl) heroEl.removeAttribute('style');
+      if (renderer && world) {
         prog = 0.1;
         world.setRide(prog);
         const redraw = () => { resize(); draw(0, true); };
         redraw();
         listen(window, 'resize', redraw);
       } else {
-        canvas.style.display = 'none';
-        showcase.style.background = 'radial-gradient(120% 80% at 50% 0%,#2a1262 0%,#0b0d2a 55%,#060716 100%)';
+        if (canvas) canvas.style.display = 'none';
+        if (showcase) showcase.style.background = 'radial-gradient(120% 80% at 50% 0%,#2a1262 0%,#0b0d2a 55%,#060716 100%)';
       }
+      jumpTo = i => {
+        const card = cardEls[i];
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
       return () => {
         offs.forEach(f => f());
-        if (renderer) { world.dispose(); renderer.dispose(); }
-        showcase.classList.remove('is-static'); canvas.style.display = ''; showcase.style.background = '';
+        if (renderer) {
+          try { world?.dispose?.(); renderer?.dispose?.(); } catch (_) {}
+        }
+        if (showcase) {
+          showcase.classList.remove('is-static');
+          showcase.style.background = '';
+        }
+        if (canvas) canvas.style.display = '';
       };
     }
 
     /* ---- animated layout ---- */
-    showcase.classList.remove('is-static');
+    if (showcase) showcase.classList.remove('is-static');
     liveIdx = -2; nearest = -2; setLive(-1);
     const DWELL = 0.16;
 
@@ -1897,7 +2029,7 @@ function initializeMidwayNights() {
     const scheduleFinalRedirect = () => {
       finalRedirectTimer = window.setTimeout(() => {
         finalRedirectTimer = 0;
-        if (sheet.open) {
+        if (sheet?.open || sheet?.hasAttribute?.('open')) {
           scheduleFinalRedirect();
           return;
         }
@@ -1929,6 +2061,9 @@ function initializeMidwayNights() {
     }
 
     gsap.registerPlugin(ScrollTrigger);
+    if ((ScrollTrigger as any).config) {
+      (ScrollTrigger as any).config({ ignoreMobileResize: true });
+    }
     const proxy = { p: 0 };
     let st = null;
     const ctx = gsap.context(() => {
@@ -1968,48 +2103,43 @@ function initializeMidwayNights() {
     io.observe(showcase);
     offs.push(() => io.disconnect());
     listen(document, 'visibilitychange', sync);
-    listen(canvas, 'webglcontextlost', e => { e.preventDefault(); inView = false; sync(); });
-    listen(canvas, 'webglcontextrestored', () => { inView = true; sync(); });
+    listen(canvas, 'webglcontextlost', e => {
+      e.preventDefault();
+      inView = false;
+      sync();
+      if (showcase) {
+        showcase.classList.add('is-static');
+        showcase.style.background = 'radial-gradient(120% 80% at 50% 0%,#2a1262 0%,#0b0d2a 55%,#060716 100%)';
+      }
+    });
+    listen(canvas, 'webglcontextrestored', () => {
+      inView = true;
+      sync();
+      if (showcase) {
+        showcase.classList.remove('is-static');
+        showcase.style.background = '';
+      }
+    });
     sync();
 
     return () => {
       running = false; cancelAnimationFrame(raf);
       clearTimeout(finalRedirectTimer);
       offs.forEach(f => f());
-      ctx.revert();
+      try { ctx?.revert?.(); } catch (_) {}
       jumpTo = () => { };
-      world.dispose(); renderer.dispose();
+      try { world?.dispose?.(); renderer?.dispose?.(); } catch (_) {}
       cardEls.forEach(c => { c.removeAttribute('style'); c.classList.remove('near', 'is-live'); });
-      cardsEl.innerHTML = '';
-      stopsEl.innerHTML = '';
       heroEl.removeAttribute('style');
     };
   }
 
-  
   /* ---------------------------------------------------------------------
      Navigation Modal Handlers (Register, About Us, Contact Us)
      --------------------------------------------------------------------- */
   const regModal = $('#register');
   const aboutModal = $('#about');
   const contactModal = $('#contact');
-
-  function openSheet(dialog) {
-    if (!dialog) return;
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
-  }
-
-  function closeSheet(dialog) {
-    if (!dialog) return;
-    if (typeof dialog.close === 'function') dialog.close();
-    else dialog.removeAttribute('open');
-    if (window.location.hash) {
-      try {
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-      } catch (_) {}
-    }
-  }
 
   const navReg = $('#navRegister');
   const navAbout = $('#navAbout');
@@ -2040,7 +2170,10 @@ function initializeMidwayNights() {
     on(regForm, 'submit', (e) => {
       e.preventDefault();
       closeSheet(regModal);
-      toast('🎉 Registration confirmed! Your pass has been issued.');
+      const nameInput = $('#regName') as HTMLInputElement;
+      const regName = nameInput?.value?.trim() || 'Guest Student';
+      const passNum = Math.floor(1000 + Math.random() * 9000);
+      toast(`🎉 Demo Pass #SP27-${passNum} Confirmed for ${regName}! Present pass at carnival entrance.`);
     });
   }
 
@@ -2068,12 +2201,23 @@ function initializeMidwayNights() {
   on(window, 'hashchange', checkInitialHash);
 
   let teardown = boot();
+  function boot3D() {
+    if (teardown) {
+      try { teardown(); } catch (_) {}
+    }
+    teardown = boot();
+  }
+  (window as any).__midwayNightsBoot3D = boot3D;
+
   const onMotionPreferenceChange = () => { teardown(); teardown = boot(); };
-  reduceMQ.addEventListener('change', onMotionPreferenceChange);
+  addMediaListener(reduceMQ, onMotionPreferenceChange);
   (window as any).__midwayNightsCleanup = () => {
-    teardown();
-    reduceMQ.removeEventListener('change', onMotionPreferenceChange);
+    try { teardown?.(); } catch (_) {}
+    removeMediaListener(reduceMQ, onMotionPreferenceChange);
+    if (cardsEl) cardsEl.innerHTML = '';
+    if (stopsEl) stopsEl.innerHTML = '';
     delete (window as any).__midwayNightsCleanup;
+    delete (window as any).__midwayNightsBoot3D;
   };
 
 }

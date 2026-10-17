@@ -189,22 +189,22 @@ function scatterLights(): TentLight[] {
    skipped: smoke, then the inside fades in.
 ========================================================= */
 
-const SPELL_SPIN_MS = 1300;
+const SPELL_SPIN_MS = 450;
 
 // how long the smoke rises before it starts to clear
-const SMOKE_RISE_MS = 1800;
+const SMOKE_RISE_MS = 450;
 
 // How long the smoke's fade-out transition takes. Must match
 // the `transition: opacity ...` duration set on .smokeCanvas
 // (and its fade-out variant) in EventsPage.module.scss.
-const SMOKE_FADE_OUT_MS = 1000;
+const SMOKE_FADE_OUT_MS = 500;
 
 // the dive starts once the smoke has thinned a little
-const DIVE_DELAY_MS = 400;
+const DIVE_DELAY_MS = 60;
 
 // how long the camera takes to dive into the doorway
 // (passed to the CSS as --dive-ms)
-const DIVE_MS = 1300;
+const DIVE_MS = 500;
 
 const DIVE_MAX_SCALE = 36;
 
@@ -215,9 +215,13 @@ const TENT_DOOR = { x: 0.5, y: 0.85, width: 0.14 };
 const DEFAULT_SMOKE_COLOR = "#5b5189";
 
 function prefersReducedMotion() {
-    return window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    ).matches;
+    try {
+        return typeof window !== "undefined" && typeof window.matchMedia === "function"
+            ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            : false;
+    } catch (_) {
+        return false;
+    }
 }
 
 const easeInOut = (t: number) =>
@@ -498,7 +502,7 @@ function WandSpell({
 
             /* ---------- wand ---------- */
 
-            if (t < SPELL_SPIN_MS + 300) {
+            if (t < SPELL_SPIN_MS + 200) {
                 const spinT = Math.min(1, t / SPELL_SPIN_MS);
 
                 const angle =
@@ -506,13 +510,13 @@ function WandSpell({
                     turns * Math.PI * 2 * easeInOut(spinT);
 
                 const alpha =
-                    t < 150
-                        ? t / 150
+                    t < 90
+                        ? t / 90
                         : t > SPELL_SPIN_MS
-                          ? Math.max(0, 1 - (t - SPELL_SPIN_MS) / 300)
+                          ? Math.max(0, 1 - (t - SPELL_SPIN_MS) / 200)
                           : 1;
 
-                const scale = 0.6 + 0.4 * easeOut(Math.min(1, t / 250));
+                const scale = 0.6 + 0.4 * easeOut(Math.min(1, t / 140));
 
                 const tipX =
                     originX + Math.cos(angle) * wandLength * 0.95 * scale;
@@ -596,7 +600,7 @@ function WandSpell({
 
             // the wand is gone and the last sparkle has faded:
             // stop drawing, the smoke takes over from here
-            if (t > SPELL_SPIN_MS + 300 && sparkles.length === 0) {
+            if (t > SPELL_SPIN_MS + 200 && sparkles.length === 0) {
                 return;
             }
 
