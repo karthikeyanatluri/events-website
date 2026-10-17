@@ -1025,6 +1025,9 @@ function initializeMidwayNights() {
       [12, -6, -24].forEach(z => members.push([V(s * 3.6, 3, z), V(s * 3.6, 0, z), 0.2]));
       [11, -1, -13, -24].forEach(z => members.push([V(s * 6.6, 9.4, z), V(s * 6.6, 0, z), 0.16]));
       for (let z = 12; z > -24; z -= 2.2) bulbs.add(V(s * 5.4, 9.1, z), z % 4.4 < 2.2 ? C.gold : C.warm, 1);
+      // Warm station platform lanterns illuminating attendees and boarding areas
+      const stLightA = new THREE.PointLight(0xffdf99, 1.8, 24, 1.2); stLightA.position.set(s * 3.6, 5.8, 2); scene.add(stLightA);
+      const stLightB = new THREE.PointLight(0xffdf99, 1.8, 24, 1.2); stLightB.position.set(s * 3.6, 5.8, -14); scene.add(stLightB);
     });
     addBox(14, 0.35, 38, 0, 9.6, -6, stMat);
     addBox(14.4, 0.16, 38.4, 0, 9.3, -6, new THREE.MeshBasicMaterial({ color: TENT_PALETTE.primary }));
@@ -1559,12 +1562,13 @@ function initializeMidwayNights() {
       return {
         mat: new THREE.MeshStandardMaterial({
           map: tex,
+          emissiveMap: tex,
+          emissive: 0xffffff,
+          emissiveIntensity: 0.95,
           transparent: true,
-          alphaTest: 0.35,
-          roughness: 0.75,
+          alphaTest: 0.15,
+          roughness: 0.35,
           metalness: 0.05,
-          emissive: 0x1a140d,
-          emissiveIntensity: 0.35,
           side: THREE.DoubleSide,
           depthWrite: false
         }),
@@ -1579,10 +1583,10 @@ function initializeMidwayNights() {
 
     const crowdMeshes = [];
 
-    const addCrowdPerson = (x, z, defIndex, scale = 1.0) => {
+    const addCrowdPerson = (x, y, z, defIndex, scale = 1.0) => {
       const item = crowdLoadedMats[defIndex];
       const mesh = new THREE.Mesh(item.geo, item.mat);
-      mesh.position.set(x, (item.def.h * scale) / 2, z);
+      mesh.position.set(x, y + (item.def.h * scale) / 2, z);
       mesh.scale.setScalar(scale);
       scene.add(mesh);
       crowdMeshes.push(mesh);
@@ -1591,37 +1595,49 @@ function initializeMidwayNights() {
       const sGeo = item.def.isLawn ? lawnShadowGeo : crowdShadowGeo;
       const sh = new THREE.Mesh(sGeo, crowdShadowMat);
       sh.rotation.x = -Math.PI / 2;
-      sh.position.set(x, 0.02, z);
+      sh.position.set(x, y + 0.02, z);
       sh.scale.setScalar(scale);
       scene.add(sh);
 
       return mesh;
     };
 
-    // 1. Foreground Station Attendees (exact layout matching user reference)
-    // Left side of station platform by the wooden fence
-    addCrowdPerson(-6.8, 5.0, REF_GIRLS_PAIR, 1.05);   // Girl in yellow dress + girl in denim talking
-    addCrowdPerson(-8.2, 6.8, REF_GUY_HOODIE, 1.05);    // Guy in red hoodie with backpack facing girls
-    addCrowdPerson(-7.2, -4.0, 2, 1.00);                // Couple pointing up towards coaster apex
-    addCrowdPerson(-8.6, -11.0, 0, 1.00);               // Spectator in hoodie looking up
+    // 1. Station Platform Attendees (standing directly on platform floor at y = 3.5 right beside coaster car)
+    // Left Platform (x = -3.4, y = 3.5): lining the platform as the train prepares to depart
+    addCrowdPerson(-3.4, 3.5, 9.5, REF_GIRLS_PAIR, 1.08);   // Excited pair of girls in festive clothes
+    addCrowdPerson(-3.6, 3.5, 6.2, REF_GUY_HOODIE, 1.08);   // Guy in red hoodie with backpack facing coaster
+    addCrowdPerson(-3.2, 3.5, 2.5, 3, 1.05);                // Pair taking photo of coaster car
+    addCrowdPerson(-3.5, 3.5, -1.0, 2, 1.05);               // Couple pointing ahead towards drop
+    addCrowdPerson(-3.3, 3.5, -4.5, REF_TRIO_GUYS, 1.08);   // College friends chatting and cheering
+    addCrowdPerson(-3.5, 3.5, -8.0, REF_GIRL_YELLOW, 1.05); // Girl in yellow dress waving at riders
+    addCrowdPerson(-3.2, 3.5, -12.0, 0, 1.05);              // Spectator cheering
+    addCrowdPerson(-3.5, 3.5, -16.0, REF_WALKER, 1.05);     // Student walking with backpack
+    addCrowdPerson(-3.3, 3.5, -19.5, REF_GIRL_DENIM, 1.05); // Girl in denim jacket watching train
 
-    // Center pathway: attendees walking down the path away from camera
-    addCrowdPerson(-1.4, -6.5, REF_WALKER, 1.05);       // Iconic guy in blue shirt with brown backpack
-    addCrowdPerson(1.8, -15.0, REF_WALKER, 0.98);       // Walking down the midway path
-    addCrowdPerson(-2.2, -26.0, REF_WALKER, 0.95);
+    // Right Platform (x = +3.4, y = 3.5): lining the platform opposite
+    addCrowdPerson(3.4, 3.5, 8.8, REF_TRIO_GUYS, 1.08);     // Group of friends cheering
+    addCrowdPerson(3.6, 3.5, 5.2, REF_GIRL_DENIM, 1.05);    // Girl looking at train
+    addCrowdPerson(3.3, 3.5, 1.5, 1, 1.05);                 // Spectators with smartphone waving
+    addCrowdPerson(3.5, 3.5, -2.5, REF_WALKER, 1.05);       // Guy with brown backpack
+    addCrowdPerson(3.3, 3.5, -6.5, 2, 1.05);                // Couple waving at riders
+    addCrowdPerson(3.5, 3.5, -10.5, REF_GIRLS_PAIR, 1.08);  // Excited friends
+    addCrowdPerson(3.3, 3.5, -14.5, REF_GUY_HOODIE, 1.05);  // Guy in hoodie
+    addCrowdPerson(3.5, 3.5, -18.5, 3, 1.05);               // Pair photographing the departing train
 
-    // Right side of station platform
-    addCrowdPerson(7.8, 5.5, REF_TRIO_GUYS, 1.05);      // Three college friends laughing and chatting
-    addCrowdPerson(7.0, -3.0, 3, 1.05);                 // Pair taking photo with smartphone
-    addCrowdPerson(8.5, -9.0, 11, 0.98);                // Girl walking
-    addCrowdPerson(6.6, -16.0, 2, 1.00);                // Couple pointing up
+    // 2. Ground Pathways Flanking Station (ground level y = 0)
+    addCrowdPerson(-7.2, 0, 6.0, REF_WALKER, 1.05);
+    addCrowdPerson(-8.5, 0, -2.0, 2, 1.05);
+    addCrowdPerson(-7.8, 0, -10.0, 0, 1.05);
+    addCrowdPerson(7.5, 0, 5.0, REF_WALKER, 1.05);
+    addCrowdPerson(8.8, 0, -4.0, 3, 1.05);
+    addCrowdPerson(7.6, 0, -12.0, 1, 1.05);
 
     // Grass lawns flanking the station
-    addCrowdPerson(-13.0, -16.0, REF_LAWN_TRIO, 1.05);  // Students sitting cross-legged in a circle with backpacks
-    addCrowdPerson(15.0, -28.0, REF_LAWN_TRIO, 1.00);   // Another picnic group on the lawn
-    addCrowdPerson(-18.0, -55.0, REF_LAWN_TRIO, 0.95);
+    addCrowdPerson(-13.0, 0, -16.0, REF_LAWN_TRIO, 1.1);
+    addCrowdPerson(15.0, 0, -28.0, REF_LAWN_TRIO, 1.05);
+    addCrowdPerson(-18.0, 0, -55.0, REF_LAWN_TRIO, 1.0);
 
-    // 2. Spectators lining the coaster fence along the track, cheering the ride
+    // 3. Spectators lining the coaster fence along the track, cheering the ride
     const trackStep = TIER.low ? 5 : 2;
     for (let i = 4; i < N - 6; i += trackStep) {
       const hl = Math.hypot(R[i].x, R[i].z) || 1;
@@ -1632,12 +1648,12 @@ function initializeMidwayNights() {
           const pz = pts[i].z + (R[i].z / hl) * side * off + (rng() - 0.5) * 1.2;
           const pool = [0, 1, 2, 3, REF_WALKER, REF_GIRLS_PAIR, REF_GIRL_YELLOW, REF_GIRL_DENIM, REF_GUY_HOODIE, REF_TRIO_GUYS, 11, 12, 13, 14, 17, 18, 19, 20];
           const idx = pool[Math.floor(rng() * pool.length)];
-          addCrowdPerson(px, pz, idx, 0.92 + rng() * 0.18);
+          addCrowdPerson(px, 0, pz, idx, 0.95 + rng() * 0.18);
         }
       });
     }
 
-    // 3. Festival attendees milling around the carnival lawn and booths
+    // 4. Festival attendees milling around the carnival lawn and booths
     const millingCount = Math.round(55 * TIER.props);
     for (let k = 0; k < millingCount; k++) {
       const a = rng() * Math.PI * 2;
@@ -1646,17 +1662,17 @@ function initializeMidwayNights() {
       const pz = -180 + Math.sin(a) * rad;
       const pool = [REF_WALKER, REF_GIRLS_PAIR, REF_GIRL_YELLOW, REF_GIRL_DENIM, REF_GUY_HOODIE, REF_TRIO_GUYS, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
       const idx = pool[Math.floor(rng() * pool.length)];
-      addCrowdPerson(px, pz, idx, 0.88 + rng() * 0.22);
+      addCrowdPerson(px, 0, pz, idx, 0.88 + rng() * 0.22);
     }
 
-    // 4. Picnic circles relaxing on the festival lawn
+    // 5. Picnic circles relaxing on the festival lawn
     const lawnCount = Math.round(12 * TIER.props);
     for (let k = 0; k < lawnCount; k++) {
       const a = rng() * Math.PI * 2;
       const rad = 25 + rng() * 65;
       const px = Math.cos(a) * rad;
       const pz = -170 + Math.sin(a) * rad;
-      addCrowdPerson(px, pz, REF_LAWN_TRIO, 0.95 + rng() * 0.25);
+      addCrowdPerson(px, 0, pz, REF_LAWN_TRIO, 0.95 + rng() * 0.25);
     }
 
     function updateCrowdAndCarnival(t) {
@@ -1818,15 +1834,159 @@ function initializeMidwayNights() {
     scene.add(bulbs.build(glow, 0.62));
     scene.add(beacons.build(glow, 2.0, 0.9));
 
-    /* ---- rider camera: car nose, headlamp ---- */
+    /* ---- rider camera: car nose, headlamp, and front-row riders ---- */
     const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 2500);
     scene.add(camera);
-    const headlamp = new THREE.PointLight(0xffd9a8, 0.5, 45, 1.6); headlamp.position.set(0, 1.4, -9); camera.add(headlamp);
-    const rim = new THREE.PointLight(TENT_PALETTE.secondary, 0.3, 40, 1.8); rim.position.set(0, -0.2, 3); camera.add(rim);
+    const headlamp = new THREE.PointLight(0xffd9a8, 0.6, 50, 1.5); headlamp.position.set(0, 1.4, -9); camera.add(headlamp);
+    const rim = new THREE.PointLight(TENT_PALETTE.secondary, 0.4, 40, 1.8); rim.position.set(0, -0.2, 3); camera.add(rim);
+
     const car = new THREE.Group();
-    car.add(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 3), new THREE.MeshStandardMaterial({ color: 0x0b0c26, metalness: 0.2, roughness: 0.85, emissive: 0x120a38, emissiveIntensity: 0.6 })));
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.05, 0.07), new THREE.MeshBasicMaterial({ color: TENT_PALETTE.accent })); trim.position.set(0, 0.29, -1.45); car.add(trim);
-    car.position.set(0, -1.75, -2.6); camera.add(car);
+    // Coaster car chassis
+    const chassisMat = new THREE.MeshStandardMaterial({
+      color: 0x0c0f2b,
+      metalness: 0.6,
+      roughness: 0.4,
+      emissive: 0x181045,
+      emissiveIntensity: 0.7
+    });
+    car.add(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 3), chassisMat));
+
+    // Sleek front nose cone with neon accent piping
+    const noseMat = new THREE.MeshStandardMaterial({
+      color: 0x1a124a,
+      metalness: 0.4,
+      roughness: 0.5,
+      emissive: 0x241066,
+      emissiveIntensity: 0.8
+    });
+    const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.95, 0.75, 16), noseMat);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 0.05, -1.8);
+    car.add(nose);
+
+    // Front headlights and glowing neon trims
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.06, 0.08), new THREE.MeshBasicMaterial({ color: TENT_PALETTE.accent }));
+    trim.position.set(0, 0.29, -1.45);
+    car.add(trim);
+
+    const neonTrimCyan = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.04, 0.04), new THREE.MeshBasicMaterial({ color: 0x22d3ee }));
+    neonTrimCyan.position.set(0, 0.26, -1.6);
+    car.add(neonTrimCyan);
+
+    [-0.58, 0.58].forEach(hx => {
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), new THREE.MeshBasicMaterial({ color: 0xfff3d0 }));
+      lamp.position.set(hx, 0.16, -1.52);
+      car.add(lamp);
+    });
+
+    // Front row bucket seats
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x12142e, roughness: 0.7, emissive: 0x101538, emissiveIntensity: 0.4 });
+    const seatNeonMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6 });
+    [-0.42, 0.42].forEach(sx => {
+      const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.82, 0.14), seatMat);
+      seatBack.position.set(sx, 0.56, -0.22);
+      car.add(seatBack);
+
+      const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.16), seatMat);
+      headrest.position.set(sx, 1.04, -0.22);
+      car.add(headrest);
+
+      const seatBezel = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.04, 0.16), seatNeonMat);
+      seatBezel.position.set(sx, 0.96, -0.22);
+      car.add(seatBezel);
+    });
+
+    // Coaster safety lap bar / harness
+    const barMat = new THREE.MeshStandardMaterial({ color: 0x2a2a35, metalness: 0.7, roughness: 0.3 });
+    const lapBar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.35, 12), barMat);
+    lapBar.rotation.z = Math.PI / 2;
+    lapBar.position.set(0, 0.62, -0.62);
+    car.add(lapBar);
+
+    // Glowing LED status light on lap bar
+    const barGlow = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.04, 0.05), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+    barGlow.position.set(0, 0.66, -0.62);
+    car.add(barGlow);
+
+    // Two excited festival riders in the front seats ahead of camera
+    const rider1Mat = new THREE.MeshStandardMaterial({ color: 0x7e22ce, emissive: 0x581c87, emissiveIntensity: 0.85, roughness: 0.6 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xdca67a, emissive: 0x734827, emissiveIntensity: 0.45, roughness: 0.8 });
+    const hair1Mat = new THREE.MeshStandardMaterial({ color: 0x1e1208, roughness: 0.9 });
+    const bandMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+
+    // Left Rider Torso & Head
+    const r1Torso = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.28), rider1Mat);
+    r1Torso.position.set(-0.42, 0.56, -0.44);
+    car.add(r1Torso);
+
+    const r1Head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 14), skinMat);
+    r1Head.position.set(-0.42, 0.96, -0.44);
+    car.add(r1Head);
+
+    const r1Hair = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hair1Mat);
+    r1Hair.position.set(-0.42, 0.98, -0.44);
+    car.add(r1Hair);
+
+    // Left Rider Arms raised in the air celebrating (\o/)
+    const armGeo = new THREE.CylinderGeometry(0.045, 0.05, 0.42, 10);
+    const r1ArmL = new THREE.Mesh(armGeo, rider1Mat);
+    r1ArmL.position.set(-0.66, 1.08, -0.44);
+    r1ArmL.rotation.z = 0.45;
+    r1ArmL.rotation.x = -0.15;
+    car.add(r1ArmL);
+
+    const r1ArmR = new THREE.Mesh(armGeo, rider1Mat);
+    r1ArmR.position.set(-0.18, 1.08, -0.44);
+    r1ArmR.rotation.z = -0.45;
+    r1ArmR.rotation.x = -0.15;
+    car.add(r1ArmR);
+
+    // Glowing festival wristbands on raised hands
+    [-0.74, -0.10].forEach(wx => {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.02, 8, 16), bandMat);
+      band.position.set(wx, 1.28, -0.42);
+      car.add(band);
+    });
+
+    // Right Rider: bright teal festival jacket with hands up cheering
+    const rider2Mat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0369a1, emissiveIntensity: 0.85, roughness: 0.6 });
+    const hair2Mat = new THREE.MeshStandardMaterial({ color: 0x3d2010, roughness: 0.9 });
+    const bandMat2 = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+
+    const r2Torso = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.28), rider2Mat);
+    r2Torso.position.set(0.42, 0.56, -0.44);
+    car.add(r2Torso);
+
+    const r2Head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 14), skinMat);
+    r2Head.position.set(0.42, 0.96, -0.44);
+    car.add(r2Head);
+
+    const r2Hair = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hair2Mat);
+    r2Hair.position.set(0.42, 0.98, -0.44);
+    car.add(r2Hair);
+
+    // Right Rider Arms raised high cheering
+    const r2ArmL = new THREE.Mesh(armGeo, rider2Mat);
+    r2ArmL.position.set(0.18, 1.08, -0.44);
+    r2ArmL.rotation.z = 0.45;
+    r2ArmL.rotation.x = -0.15;
+    car.add(r2ArmL);
+
+    const r2ArmR = new THREE.Mesh(armGeo, rider2Mat);
+    r2ArmR.position.set(0.66, 1.08, -0.44);
+    r2ArmR.rotation.z = -0.45;
+    r2ArmR.rotation.x = -0.15;
+    car.add(r2ArmR);
+
+    // Glowing festival wristbands
+    [0.10, 0.74].forEach(wx => {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.02, 8, 16), bandMat2);
+      band.position.set(wx, 1.28, -0.42);
+      car.add(band);
+    });
+
+    car.position.set(0, -1.75, -2.6);
+    camera.add(car);
 
     const fp = V(0, 0, 0), ft = V(0, 0, 0), fu = V(0, 0, 0), la = V(0, 0, 0), lt = V(0, 0, 0), lu = V(0, 0, 0);
     function frame(u, oP, oT, oU) {
