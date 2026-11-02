@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -14,10 +15,12 @@ import {
 } from "react-router-dom";
 
 import Nav from "../../components/Nav";
+import Preloader from "../Preloader";
 
-import Curtains from "./Curtains";
-import { SCHOOLS, schoolBySlug, type School } from "./schools";
+import Curtains, { CURTAIN_CLOSE_MS } from "./Curtains";
+import { schoolBySlug, type School } from "./schools";
 import styles from "./EventsPage.module.scss";
+import { getDepartmentEvents, resolveDepartmentId } from "../../data/eventsData";
 
 import tentViolet from "../../assets/Events/tents/tent-violet.webp";
 import tentMaroon from "../../assets/Events/tents/tent-maroon.webp";
@@ -26,6 +29,18 @@ import tentPlum from "../../assets/Events/tents/tent-plum.webp";
 import tentAmethyst from "../../assets/Events/tents/tent-amethyst.webp";
 import tentWine from "../../assets/Events/tents/tent-wine.webp";
 import tentRoyal from "../../assets/Events/tents/tent-royal.webp";
+
+
+interface EventData {
+    id: string;
+    name: string;
+    category: string;
+    club_name: string | null;
+    venue: string | null;
+    description: string | null;
+    image_url: string | null;
+    rulebook: string | null;
+}
 
 /* =========================================================
    DEPARTMENTS
@@ -84,7 +99,29 @@ function shadeOf(school: School, department: Department) {
     ];
 }
 
+/* =========================================================
+   PRELOADER ASSETS
 
+   Every image imported above — the tent shades — so the
+   preloader waits for all of them before
+   revealing the page, the same way About.tsx does with
+   ABOUT_ASSETS.
+========================================================= */
+
+const EVENTS_ASSETS = [
+    ...TENT_SHADES.map((shade) => shade.src),
+];
+
+/* =========================================================
+   EVENT DATA
+
+   Events per department, shown in the modal when its tent is
+   clicked. A department with no entry opens the "No Events
+   Found" card.
+========================================================= */
+
+const eventsData: Partial<Record<Department, EventData[]>> = {};
+// e.g. eventsData["CSE"] = [{ id: "hackathon", name: "Hackathon", ... }]
 
 /* =========================================================
    TENT LEDS
@@ -189,10 +226,10 @@ function scatterLights(): TentLight[] {
    skipped: smoke, then the inside fades in.
 ========================================================= */
 
-const SPELL_SPIN_MS = 450;
+const SPELL_SPIN_MS = 1300;
 
 // how long the smoke rises before it starts to clear
-const SMOKE_RISE_MS = 450;
+const SMOKE_RISE_MS = 550;
 
 // How long the smoke's fade-out transition takes. Must match
 // the `transition: opacity ...` duration set on .smokeCanvas
@@ -200,28 +237,40 @@ const SMOKE_RISE_MS = 450;
 const SMOKE_FADE_OUT_MS = 500;
 
 // the dive starts once the smoke has thinned a little
-const DIVE_DELAY_MS = 60;
+const DIVE_DELAY_MS = 100;
 
 // how long the camera takes to dive into the doorway
 // (passed to the CSS as --dive-ms)
-const DIVE_MS = 500;
+const DIVE_MS = 800;
 
 const DIVE_MAX_SCALE = 36;
+
+// must match the opacity transition on .tentInteriorLeaving
+const INSIDE_FADE_OUT_MS = 600;
 
 // the doorway in the tent images, as fractions of the image:
 // its centre and its width
 const TENT_DOOR = { x: 0.5, y: 0.85, width: 0.14 };
 
+/* =========================================================
+   INSIDE THE TENT
+
+   Artwork for the inside of each tent, shown when the camera
+   has dived in. Until it is added, a placeholder canopy in
+   the tent's colour is drawn in CSS (.tentInterior). To add
+   it, import the image above and map it here, e.g.
+   { AI: aiInside, LAW: lawInside }; a department without
+   an entry keeps the placeholder.
+========================================================= */
+
+const TENT_INTERIORS: Partial<Record<Department, string>> = {};
+
 const DEFAULT_SMOKE_COLOR = "#5b5189";
 
 function prefersReducedMotion() {
-    try {
-        return typeof window !== "undefined" && typeof window.matchMedia === "function"
-            ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            : false;
-    } catch (_) {
-        return false;
-    }
+    return window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches;
 }
 
 const easeInOut = (t: number) =>
@@ -502,7 +551,7 @@ function WandSpell({
 
             /* ---------- wand ---------- */
 
-            if (t < SPELL_SPIN_MS + 200) {
+            if (t < SPELL_SPIN_MS + 300) {
                 const spinT = Math.min(1, t / SPELL_SPIN_MS);
 
                 const angle =
@@ -510,13 +559,13 @@ function WandSpell({
                     turns * Math.PI * 2 * easeInOut(spinT);
 
                 const alpha =
-                    t < 90
-                        ? t / 90
+                    t < 150
+                        ? t / 150
                         : t > SPELL_SPIN_MS
-                          ? Math.max(0, 1 - (t - SPELL_SPIN_MS) / 200)
+                          ? Math.max(0, 1 - (t - SPELL_SPIN_MS) / 300)
                           : 1;
 
-                const scale = 0.6 + 0.4 * easeOut(Math.min(1, t / 140));
+                const scale = 0.6 + 0.4 * easeOut(Math.min(1, t / 250));
 
                 const tipX =
                     originX + Math.cos(angle) * wandLength * 0.95 * scale;
@@ -600,7 +649,7 @@ function WandSpell({
 
             // the wand is gone and the last sparkle has faded:
             // stop drawing, the smoke takes over from here
-            if (t > SPELL_SPIN_MS + 200 && sparkles.length === 0) {
+            if (t > SPELL_SPIN_MS + 300 && sparkles.length === 0) {
                 return;
             }
 
@@ -1699,36 +1748,18 @@ const makeSoftSprite = (
    tents; an unknown school goes back to the Tickets page.
 ========================================================= */
 
-export default function EventsPage({
-    initialSchool,
-    embedded = false,
-}: {
-    initialSchool?: School;
-    embedded?: boolean;
-} = {}) {
+export default function EventsPage() {
     const { school: slug } = useParams();
-    const school = (slug ? schoolBySlug(slug) : null) || initialSchool || SCHOOLS[0];
+    const school = schoolBySlug(slug);
 
     if (!school) {
         return <Navigate to="/events" replace />;
     }
 
-    return (
-        <SchoolTents
-            key={school.slug}
-            school={school}
-            embedded={embedded}
-        />
-    );
+    return <SchoolTents key={school.slug} school={school} />;
 }
 
-function SchoolTents({
-    school,
-    embedded = false,
-}: {
-    school: School;
-    embedded?: boolean;
-}) {
+function SchoolTents({ school }: { school: School }) {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -1740,6 +1771,7 @@ function SchoolTents({
     );
 
     const [curtainsOpen, setCurtainsOpen] = useState(!fromTicket);
+    const [curtainsClosing, setCurtainsClosing] = useState(false);
 
     // the scene that the "camera" dives into (background, sign
     // and tents; the nav stays put)
@@ -1767,6 +1799,12 @@ function SchoolTents({
 
         sequenceTimersRef.current = [];
     };
+
+    const [
+        selectedCategory,
+        setSelectedCategory,
+    ] =
+        useState<Department | null>(null);
 
     const [
         spellOrigin,
@@ -1817,6 +1855,22 @@ function SchoolTents({
         setDiving,
     ] = useState(false);
 
+    // the inside of the tent, shown at the end of the dive
+    const [
+        inside,
+        setInside,
+    ] = useState(false);
+
+    const [
+        leavingTent,
+        setLeavingTent,
+    ] = useState(false);
+
+    const [
+        currentIndex,
+        setCurrentIndex,
+    ] = useState(0);
+
     // the LEDs currently scattered on each tent; a tent gets a
     // new random set every time the cursor (or focus) reaches it
     const [
@@ -1831,8 +1885,22 @@ function SchoolTents({
         }));
     };
 
+    // Mirrors About.tsx's aboutPreloaderDone: the Preloader
+    // stays mounted (blocking the page) until every asset in
+    // EVENTS_ASSETS has loaded, then this flips to true and
+    // it unmounts.
+    const [
+        eventsPreloaderDone,
+        setEventsPreloaderDone,
+    ] = useState(true);
+
+    const handleEventsPreloaderEnter =
+        useCallback(() => {
+            setEventsPreloaderDone(true);
+        }, []);
+
     /* =====================================================
-       CLEANUP PENDING TIMERS ON UNMOUNT
+       CLEANUP PENDING TIMERS ON UNMOUNT & ROUTE RESET
     ===================================================== */
 
     useEffect(() => {
@@ -1845,6 +1913,12 @@ function SchoolTents({
         };
     }, []);
 
+    useEffect(() => {
+        clearSequence();
+        resetSequence();
+        setCurtainsClosing(false);
+    }, [school.slug, location.pathname]);
+
     /* =====================================================
        RESET THE CLICK SEQUENCE
     ===================================================== */
@@ -1856,10 +1930,18 @@ function SchoolTents({
         setSmokeFading(false);
         setDive(null);
         setDiving(false);
+        setInside(false);
+        setLeavingTent(false);
+        setCurtainsClosing(false);
     };
 
     /* =====================================================
-       OPEN CATEGORY -> DIRECT ROLLERCOASTER RIDE
+       OPEN CATEGORY
+
+       wand spins (SPELL_SPIN_MS) -> smoke rises
+       (SMOKE_RISE_MS) -> smoke clears and the camera dives
+       into the tent's doorway (DIVE_DELAY_MS, DIVE_MS) ->
+       the inside of the tent fades in -> modal opens.
     ===================================================== */
 
     const openCategory = (
@@ -1868,6 +1950,7 @@ function SchoolTents({
     ) => {
         clearSequence();
         resetSequence();
+        setSelectedCategory(null);
 
         const rect =
             e.currentTarget.getBoundingClientRect();
@@ -1926,7 +2009,9 @@ function SchoolTents({
         const diveMs = wand ? DIVE_MS : 0;
 
         later(() => setSmokeRising(true), smokeAt);
+
         later(() => setSmokeFading(true), clearAt);
+
         later(() => {
             setSmokeRising(false);
             setSmokeFading(false);
@@ -1940,10 +2025,152 @@ function SchoolTents({
         document.documentElement.style.setProperty('--violet', tentSmoke);
         document.documentElement.style.setProperty('--primary', tentSmoke);
 
+        // As camera plunges into the doorway, sweep curtains shut smoothly to mask the route transition
+        later(() => {
+            setCurtainsClosing(true);
+        }, diveAt + (wand ? Math.round(diveMs * 0.4) : 0));
+
+        // When curtains have swept shut over the doorway, navigate to the 3D roller coaster!
         later(() => {
             navigate(`/midway-nights?tent=${tentSlug}&school=${school.slug}&color=${encodeURIComponent(tentSmoke)}&return=${encodeURIComponent(`/events/${school.slug}`)}`);
-        }, diveAt + (wand ? diveMs * 0.7 : 0));
+        }, diveAt + (wand ? Math.round(diveMs * 0.4) : 0) + CURTAIN_CLOSE_MS);
     };
+
+    /* =====================================================
+       CLOSE MODAL
+
+       The modal closes immediately. Behind the inside of the
+       tent the camera jumps back out, then the inside fades
+       away (INSIDE_FADE_OUT_MS, matching .tentInteriorLeaving)
+       to reveal the tents again.
+    ===================================================== */
+
+    const closeModal = () => {
+        clearSequence();
+
+        setSelectedCategory(null);
+        setCurrentIndex(0);
+
+        if (inside) {
+            setDiving(false);
+            setLeavingTent(true);
+
+            later(resetSequence, INSIDE_FADE_OUT_MS);
+        } else {
+            resetSequence();
+        }
+    };
+
+    /* =====================================================
+       CURRENT EVENTS
+    ===================================================== */
+
+    const deptId = selectedCategory ? (resolveDepartmentId(selectedCategory) || selectedCategory) : null;
+    const canonicalEvents = deptId ? getDepartmentEvents(deptId) : [];
+    const mappedCanonical: EventData[] = canonicalEvents.map(ev => ({
+        id: ev.id,
+        name: ev.name || ev.title,
+        category: ev.category,
+        club_name: ev.club_name ?? null,
+        venue: ev.venue ?? null,
+        description: (ev.description || ev.blurb) ?? null,
+        image_url: (ev.image_url || ev.image) ?? null,
+        rulebook: ev.rulebook ?? null
+    }));
+
+    const currentEvents: EventData[] =
+        selectedCategory
+            ? (mappedCanonical.length > 0 ? mappedCanonical : (eventsData[selectedCategory] ?? []))
+            : [];
+
+    /* =====================================================
+       NEXT EVENT
+    ===================================================== */
+
+    const handleNext = () => {
+        if (currentEvents.length <= 1) {
+            return;
+        }
+
+        setCurrentIndex((prev) => {
+            if (
+                prev >=
+                currentEvents.length - 1
+            ) {
+                return 0;
+            }
+
+            return prev + 1;
+        });
+    };
+
+    /* =====================================================
+       PREVIOUS EVENT
+    ===================================================== */
+
+    const handlePrev = () => {
+        if (currentEvents.length <= 1) {
+            return;
+        }
+
+        setCurrentIndex((prev) => {
+            if (prev <= 0) {
+                return (
+                    currentEvents.length - 1
+                );
+            }
+
+            return prev - 1;
+        });
+    };
+
+    /* =====================================================
+       KEYBOARD
+    ===================================================== */
+
+    useEffect(() => {
+        if (!selectedCategory) {
+            return;
+        }
+
+        const handleKeyDown = (
+            e: KeyboardEvent
+        ) => {
+            if (e.key === "Escape") {
+                closeModal();
+            }
+
+            if (e.key === "ArrowRight") {
+                handleNext();
+            }
+
+            if (e.key === "ArrowLeft") {
+                handlePrev();
+            }
+        };
+
+        document.addEventListener(
+            "keydown",
+            handleKeyDown
+        );
+
+        return () => {
+            document.removeEventListener(
+                "keydown",
+                handleKeyDown
+            );
+        };
+    }, [
+        selectedCategory,
+        currentEvents.length,
+    ]);
+
+    /* =====================================================
+       CURRENT EVENT
+    ===================================================== */
+
+    const currentEvent =
+        currentEvents[currentIndex];
 
     const smokeColor =
         spellDepartment
@@ -1960,25 +2187,21 @@ function SchoolTents({
                 NAV
             ================================================= */}
 
-            {!embedded && (
-                <section>
-                    <Nav />
-                </section>
-            )}
+            <section>
+                <Nav />
+            </section>
 
             {/* =================================================
                 BACK TO THE TICKETS
             ================================================= */}
 
-            {!embedded && (
-                <button
-                    type="button"
-                    className={styles.backButton}
-                    onClick={() => navigate("/events")}
-                >
-                    <span aria-hidden="true">◂</span> All Schools
-                </button>
-            )}
+            <button
+                type="button"
+                className={styles.backButton}
+                onClick={() => navigate("/events")}
+            >
+                <span aria-hidden="true">◂</span> All Schools
+            </button>
 
             {/* =================================================
                 SCENE
@@ -2119,6 +2342,39 @@ function SchoolTents({
 
             </div>
 
+            {/* =================================================
+                INSIDE THE TENT
+            ================================================= */}
+
+            {inside && spellDepartment && (
+                <div
+                    className={`${styles.tentInterior} ${
+                        leavingTent
+                            ? styles.tentInteriorLeaving
+                            : ""
+                    }`}
+                    data-image={
+                        TENT_INTERIORS[spellDepartment]
+                            ? true
+                            : undefined
+                    }
+                    style={
+                        {
+                            "--interior-color":
+                                shadeOf(school, spellDepartment)
+                                    .smoke,
+                            ...(TENT_INTERIORS[
+                                spellDepartment
+                            ]
+                                ? {
+                                      backgroundImage: `url(${TENT_INTERIORS[spellDepartment]})`,
+                                  }
+                                : {}),
+                        } as CSSProperties
+                    }
+                    aria-hidden="true"
+                />
+            )}
 
             {/* =================================================
                 SMOKE (rises once the wand has spun)
@@ -2157,10 +2413,317 @@ function SchoolTents({
                     color={
                         smokeColor
                     }
-                    fadingOut={smokeFading}
+                    fadingOut={leavingTent}
                 />
             )}
 
+            {/* =================================================
+                MODAL
+            ================================================= */}
+
+            {selectedCategory !== null && (
+                <div
+                    className={
+                        styles.modalOverlay
+                    }
+                    onClick={closeModal}
+                >
+                    <div
+                        className={
+                            currentEvents.length ===
+                            0
+                                ? styles.noEventsModal
+                                : styles.modal
+                        }
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+                        {/* =====================================
+                            CLOSE
+                        ===================================== */}
+
+                        <button
+                            className={
+                                styles.closeButton
+                            }
+                            onClick={
+                                closeModal
+                            }
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+
+                        {/* =====================================
+                            NO EVENTS
+                        ===================================== */}
+
+                        {currentEvents.length ===
+                        0 ? (
+                            <div
+                                className={
+                                    styles.noEventsContent
+                                }
+                            >
+                                <h2>
+                                    No Events Found
+                                </h2>
+
+                                <p>
+                                    Alas! There are no{" "}
+                                    {selectedCategory.replace(/\n/g, " ")}{" "}
+                                    events to discover
+                                    at the moment.
+                                </p>
+
+                                <div style={{ marginTop: "1.5rem" }}>
+                                    <button
+                                        type="button"
+                                        className={styles.rulebookButton}
+                                        style={{
+                                            background: "linear-gradient(135deg, #ffd37a, #ff9f1c)",
+                                            color: "#1a1030",
+                                            border: "none",
+                                            fontWeight: 700,
+                                            cursor: "pointer"
+                                        }}
+                                        onClick={() => {
+                                            const slug = slugOf(selectedCategory);
+                                            const smoke = shadeOf(school, selectedCategory).smoke;
+                                            navigate(`/midway-nights?tent=${slug}&school=${school.slug}&color=${encodeURIComponent(smoke)}&return=${encodeURIComponent(`/events/${school.slug}`)}`);
+                                        }}
+                                    >
+                                        🎢 Ride 3D Coaster
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* =================================
+                                   EVENT
+                                ================================= */}
+
+                                <div
+                                    className={
+                                        styles.modalContent
+                                    }
+                                >
+                                    {/* =========================
+                                        LEFT
+                                    ========================= */}
+
+                                    <div
+                                        className={
+                                            styles.eventInfo
+                                        }
+                                    >
+                                        <h2>
+                                            {
+                                                currentEvent.name
+                                            }
+                                        </h2>
+
+                                        {currentEvent.description && (
+                                            <p
+                                                className={
+                                                    styles.description
+                                                }
+                                            >
+                                                {
+                                                    currentEvent.description
+                                                }
+                                            </p>
+                                        )}
+
+                                        {/* DETAILS */}
+
+                                        <div
+                                            className={
+                                                styles.eventDetails
+                                            }
+                                        >
+                                            {/* CLUB */}
+
+                                            {currentEvent.club_name && (
+                                                <div
+                                                    className={
+                                                        styles.detail
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.icon
+                                                        }
+                                                    >
+                                                        ◆
+                                                    </span>
+
+                                                    <span>
+                                                        {
+                                                            currentEvent.club_name
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* VENUE */}
+
+                                            {currentEvent.venue && (
+                                                <div
+                                                    className={
+                                                        styles.detail
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.icon
+                                                        }
+                                                    >
+                                                        ⌖
+                                                    </span>
+
+                                                    <span>
+                                                        {
+                                                            currentEvent.venue
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* RULEBOOK */}
+
+                                        <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "1rem", flexWrap: "wrap" }}>
+                                            {currentEvent.rulebook && (
+                                                <a
+                                                    href={
+                                                        currentEvent.rulebook.startsWith("http")
+                                                            ? currentEvent.rulebook
+                                                            : "https://docs.google.com/document/d/19yAh7FlGDDVqDHc4ZiUbPv1kwSmhOCYdFTghMzR0UAE/edit?tab=t.0"
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={
+                                                        styles.rulebookButton
+                                                    }
+                                                >
+                                                    Rulebook
+                                                </a>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                className={styles.rulebookButton}
+                                                style={{
+                                                    background: "linear-gradient(135deg, #ffd37a, #ff9f1c)",
+                                                    color: "#1a1030",
+                                                    border: "none",
+                                                    fontWeight: 700,
+                                                    cursor: "pointer"
+                                                }}
+                                                onClick={() => {
+                                                    const slug = slugOf(selectedCategory);
+                                                    const smoke = shadeOf(school, selectedCategory).smoke;
+                                                    navigate(`/midway-nights?tent=${slug}&school=${school.slug}&color=${encodeURIComponent(smoke)}&return=${encodeURIComponent(`/events/${school.slug}`)}`);
+                                                }}
+                                                title="Experience this department in Midway Nights 3D Roller Coaster"
+                                            >
+                                                🎢 Ride 3D Coaster
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* =========================
+                                        RIGHT IMAGE
+                                    ========================= */}
+
+                                    <div
+                                        className={
+                                            styles.eventImage
+                                        }
+                                    >
+                                        {currentEvent.image_url ? (
+                                            <img
+                                                src={
+                                                    currentEvent.image_url
+                                                }
+                                                alt={
+                                                    currentEvent.name
+                                                }
+                                            />
+                                        ) : (
+                                            <div
+                                                className={
+                                                    styles.imagePlaceholder
+                                                }
+                                            >
+                                                <span>
+                                                    {
+                                                        currentEvent.name
+                                                    }
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* =================================
+                                    EVENT NAVIGATION
+                                ================================= */}
+
+                                {currentEvents.length >
+                                    1 && (
+                                    <div
+                                        className={
+                                            styles.navigation
+                                        }
+                                    >
+                                        <button
+                                            className={
+                                                styles.navButton
+                                            }
+                                            onClick={
+                                                handlePrev
+                                            }
+                                            aria-label="Previous event"
+                                        >
+                                            ‹
+                                        </button>
+
+                                        <span
+                                            className={
+                                                styles.counter
+                                            }
+                                        >
+                                            {
+                                                currentIndex +
+                                                1
+                                            }
+                                            {" / "}
+                                            {
+                                                currentEvents.length
+                                            }
+                                        </span>
+
+                                        <button
+                                            className={
+                                                styles.navButton
+                                            }
+                                            onClick={
+                                                handleNext
+                                            }
+                                            aria-label="Next event"
+                                        >
+                                            ›
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* =================================================
                 PRELOADER
@@ -2177,6 +2740,19 @@ function SchoolTents({
                 />
             )}
 
+            {curtainsClosing && (
+                <Curtains
+                    state="closing"
+                />
+            )}
+
+            {!eventsPreloaderDone && (
+                <Preloader
+                    assets={EVENTS_ASSETS}
+                       fonts={["Cinzel", "EBGaramond"]}
+                    onEnter={handleEventsPreloaderEnter}
+                />
+            )}
         </div>
     );
 }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { getDepartmentEvents, resolveDepartmentId, getDepartmentInfo, validateEventData, type CanonicalEvent } from "./data/eventsData";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { schoolBySlug, schoolForDepartment } from "./pages/EventsPage/schools";
 import "./MidwayNights.scss";
 
@@ -52,11 +53,11 @@ function loadScript(src: string): Promise<void> {
     script.addEventListener("load", onLoad, { once: true });
     script.addEventListener("error", onError, { once: true });
 
-    // 4s timeout per CDN to gracefully try fallbacks if a network stalls
+    // 1.5s timeout per CDN to quickly try fallbacks if a network stalls
     timer = window.setTimeout(() => {
       cleanup();
       reject(new Error(`Timeout loading ${src}`));
-    }, 4000);
+    }, 1500);
 
     if (!existing) {
       script.src = src;
@@ -80,7 +81,49 @@ async function loadLibrary(urls: string[], isReady: () => boolean): Promise<bool
   return isReady();
 }
 
-export default function MidwayNights() {
+export interface MidwayNightsProps {
+  onHome?: (e?: React.MouseEvent | MouseEvent) => void;
+  onRegister?: (e?: React.MouseEvent | MouseEvent) => void;
+  onAbout?: (e?: React.MouseEvent | MouseEvent) => void;
+  onContact?: (e?: React.MouseEvent | MouseEvent) => void;
+  homeUrl?: string;
+  registerUrl?: string;
+  aboutUrl?: string;
+  contactUrl?: string;
+}
+
+export type MidwayNavPlaceholders = MidwayNightsProps;
+
+export const defaultNavPlaceholders: MidwayNightsProps = {
+  homeUrl: "/",
+  registerUrl: "#register",
+  aboutUrl: "#about",
+  contactUrl: "#contact",
+  onHome: () => {
+    console.log("[MidwayNights] Home placeholder clicked");
+  },
+  onRegister: () => {
+    console.log("[MidwayNights] Register placeholder clicked");
+  },
+  onAbout: () => {
+    console.log("[MidwayNights] About Us placeholder clicked");
+  },
+  onContact: () => {
+    console.log("[MidwayNights] Contact Us placeholder clicked");
+  },
+};
+
+export function MidwayNights({
+  onHome,
+  onRegister,
+  onAbout,
+  onContact,
+  homeUrl = "/",
+  registerUrl = "#register",
+  aboutUrl = "#about",
+  contactUrl = "#contact"
+}: MidwayNightsProps = {}) {
+  const navigate = useNavigate();
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const rawTent = (params.get('tent') || params.get('department') || '').trim();
   const tentKey = rawTent.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -98,6 +141,49 @@ export default function MidwayNights() {
   const schoolSlug = resolvedSchool?.slug || 'engineering';
   const schoolReturnPath = `/events/${schoolSlug}`;
 
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (onHome) {
+      e.preventDefault();
+      onHome(e);
+    } else if (!homeUrl || homeUrl === '#' || homeUrl === '#home') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleRegisterClick = (e: React.MouseEvent) => {
+    if (onRegister) {
+      e.preventDefault();
+      onRegister(e);
+    } else {
+      const regModal = document.getElementById('register') as HTMLDialogElement;
+      if (regModal?.showModal) regModal.showModal();
+      else if (regModal) regModal.setAttribute('open', '');
+    }
+  };
+
+  const handleAboutClick = (e: React.MouseEvent) => {
+    if (onAbout) {
+      e.preventDefault();
+      onAbout(e);
+    } else {
+      const aboutModal = document.getElementById('about') as HTMLDialogElement;
+      if (aboutModal?.showModal) aboutModal.showModal();
+      else if (aboutModal) aboutModal.setAttribute('open', '');
+    }
+  };
+
+  const handleContactClick = (e: React.MouseEvent) => {
+    if (onContact) {
+      e.preventDefault();
+      onContact(e);
+    } else {
+      const contactModal = document.getElementById('contact') as HTMLDialogElement;
+      if (contactModal?.showModal) contactModal.showModal();
+      else if (contactModal) contactModal.setAttribute('open', '');
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     const win = window as ScriptWindow;
@@ -105,7 +191,16 @@ export default function MidwayNights() {
     // Phase 1: Immediately initialize DOM cards, styles, dialogs, and static fallback
     // This runs synchronously in <1ms so no device ever sees a blank screen!
     try {
-      initializeMidwayNights();
+      initializeMidwayNights({
+        onHome,
+        onRegister,
+        onAbout,
+        onContact,
+        homeUrl,
+        registerUrl,
+        aboutUrl,
+        contactUrl
+      });
     } catch (e) {
       console.error("MidwayNights DOM init error:", e);
     }
@@ -113,14 +208,21 @@ export default function MidwayNights() {
     // Phase 2: Progressively load 3D animation libraries and boot the roller coaster
     const start = async () => {
       try {
-        if (!((window as any).THREE && (window as any).gsap && (window as any).ScrollTrigger)) {
+        const isThreeReady = () => !!(window as any).THREE;
+        const isGsapReady = () => !!(window as any).gsap;
+        const isScrollTriggerReady = () => !!((window as any).ScrollTrigger || (window as any).gsap?.ScrollTrigger);
+
+        if (!(isThreeReady() && isGsapReady() && isScrollTriggerReady())) {
           await Promise.all([
-            loadLibrary(LIB_SOURCES.three, () => !!(window as any).THREE),
-            loadLibrary(LIB_SOURCES.gsap, () => !!(window as any).gsap)
+            loadLibrary(LIB_SOURCES.three, isThreeReady),
+            loadLibrary(LIB_SOURCES.gsap, isGsapReady)
           ]);
-          if ((window as any).gsap && !(window as any).ScrollTrigger) {
-            await loadLibrary(LIB_SOURCES.scrollTrigger, () => !!(window as any).ScrollTrigger);
+          if ((window as any).gsap && !isScrollTriggerReady()) {
+            await loadLibrary(LIB_SOURCES.scrollTrigger, isScrollTriggerReady);
           }
+        }
+        if ((window as any).gsap?.registerPlugin && (window as any).ScrollTrigger) {
+          (window as any).gsap.registerPlugin((window as any).ScrollTrigger);
         }
       } catch (error) {
         console.warn("Animation libraries loading completed with fallback:", error);
@@ -147,25 +249,54 @@ export default function MidwayNights() {
   return (
     <div className="midway-nights-page">
             <header className="nav">
-        <a className="brand" href={schoolReturnPath} onClick={(e) => { e.preventDefault(); window.location.assign(schoolReturnPath); }} title="Back to School Department Tents">
+        <a
+          className="brand"
+          href={schoolReturnPath}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(schoolReturnPath, { state: { fromTicket: true } });
+          }}
+          title="Back to School Department Tents"
+        >
           <span className="bulb" aria-hidden="true"></span>Events
         </a>
         <nav className="nav-links" aria-label="Primary">
+          <a
+            href={homeUrl}
+            className="nav-link"
+            id="navHome"
+            onClick={handleHomeClick}
+            title="Home"
+          >
+            Home
+          </a>
           <button
             type="button"
             className="nav-register-btn"
             id="navRegister"
-            onClick={() => {
-              const regModal = document.getElementById('register') as HTMLDialogElement;
-              if (regModal?.showModal) regModal.showModal();
-              else if (regModal) regModal.setAttribute('open', '');
-            }}
+            onClick={handleRegisterClick}
             title="Register for SUPRAGNA 2K27"
           >
             Register
           </button>
-          <a href="#about" className="nav-link" id="navAbout">About Us</a>
-          <a href="#contact" className="nav-link" id="navContact">Contact Us</a>
+          <a
+            href={aboutUrl}
+            className="nav-link"
+            id="navAbout"
+            onClick={handleAboutClick}
+            title="About Us"
+          >
+            About Us
+          </a>
+          <a
+            href={contactUrl}
+            className="nav-link"
+            id="navContact"
+            onClick={handleContactClick}
+            title="Contact Us"
+          >
+            Contact Us
+          </a>
         </nav>
       </header>
 
@@ -328,7 +459,7 @@ export default function MidwayNights() {
   );
 }
 
-function initializeMidwayNights() {
+function initializeMidwayNights(navProps?: MidwayNightsProps) {
 
   'use strict';
 
@@ -2301,12 +2432,44 @@ function initializeMidwayNights() {
   const aboutModal = $('#about');
   const contactModal = $('#contact');
 
+  const navHome = $('#navHome');
   const navReg = $('#navRegister');
   const navAbout = $('#navAbout');
   const navContact = $('#navContact');
-  if (navReg) on(navReg, 'click', (e) => { e.preventDefault(); openSheet(regModal); });
-  if (navAbout) on(navAbout, 'click', (e) => { e.preventDefault(); openSheet(aboutModal); });
-  if (navContact) on(navContact, 'click', (e) => { e.preventDefault(); openSheet(contactModal); });
+
+  if (navHome) on(navHome, 'click', (e) => {
+    if (navProps?.onHome) {
+      e.preventDefault();
+      navProps.onHome(e);
+    }
+  });
+  if (navReg) on(navReg, 'click', (e) => {
+    if (navProps?.onRegister) {
+      e.preventDefault();
+      navProps.onRegister(e);
+    } else {
+      e.preventDefault();
+      openSheet(regModal);
+    }
+  });
+  if (navAbout) on(navAbout, 'click', (e) => {
+    if (navProps?.onAbout) {
+      e.preventDefault();
+      navProps.onAbout(e);
+    } else {
+      e.preventDefault();
+      openSheet(aboutModal);
+    }
+  });
+  if (navContact) on(navContact, 'click', (e) => {
+    if (navProps?.onContact) {
+      e.preventDefault();
+      navProps.onContact(e);
+    } else {
+      e.preventDefault();
+      openSheet(contactModal);
+    }
+  });
 
   const regClose = $('#regClose');
   const aboutClose = $('#aboutClose');
@@ -2381,3 +2544,5 @@ function initializeMidwayNights() {
   };
 
 }
+
+export default MidwayNights;
